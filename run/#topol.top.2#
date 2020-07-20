@@ -45,7 +45,7 @@
 
 [ system ]
 ; Name
-Protein in water
+Protein
 
 [ molecules ]
 ; Compound        #mols
@@ -66,4 +66,3 @@ SOL               212
 SOL               212
 SOL         124
 CL               88
-SOL              1141

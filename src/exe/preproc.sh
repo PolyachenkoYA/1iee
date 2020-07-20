@@ -42,13 +42,10 @@ gmx pdb2gmx -f 1iee_prot4gmx.pdb -o 1iee_init.gro -water tip3p < protonation_gro
 gmx editconf -f 1iee_init.gro -o 1iee_newbox.gro -bt triclinic -box 7.7061 7.7061 3.7223 -noc
 gmx grompp -f ions.mdp -c 1iee_newbox.gro -p topol.top -o ions.tpr
 gmx genion -s ions.tpr -o 1iee_wions.gro -p topol.top -pname NA -nname CL -neutral -rmin 0.25  < genion_gromacs.in
-gmx trjconv -f 1iee_wions.gro -s 1iee_wions.gro -o 1iee_wions.pdb < output_whole_sys0.in
-
-### add header to the pdb
-
+#gmx trjconv -f 1iee_wions.gro -s 1iee_wions.gro -o 1iee_wions.pdb < output_whole_sys0.in
 #gmx pdb2gmx -f 1iee_wions_cr.pdb -o 1iee_wions_cr.gro -water spce
 #gmx editconf -f 1iee_wions_cr.gro -o 1iee_wions_cr_cent.gro -c
-#gmx solvate -cp 1iee_wions_cr_cent.gro -cs spc216.gro -o 1iee_solv.gro -p topol.top
+gmx solvate -cp 1iee_wions.gro -cs spc216.gro -o 1iee_solv.gro -p topol.top
 
 #################################################
 
