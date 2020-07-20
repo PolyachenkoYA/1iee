@@ -32,17 +32,17 @@ cd ../../run
 # write relative 0 8 pdb/1iee_cryst.pdb
 
 
-# src/exe/clear_restore.sh
+### go to website and protonate (prepare protein) -> 1iee_prot.pdb
+### this potentially might by done using pythong code given by the website.
 
-#grep -v HOH 1iee.pdb | grep -v -w CL | grep -v -w NA > 1iee_clean.pdb
-gmx pdb2gmx -f 1iee_cryst_prot.pdb -o 1iee_init.gro -water tip4p -asp -his -glu
-###                                         asp(52) -1 ->  0
-###                                         his(15)  0 -> +1
-### possibly (pKa = 6.89 vs 7.0 in gromacs) glu(35) -1 ->  0
+
+../src/exe/playmol2gmx.sh 1iee_prot.pdb 1iee_prot4gmx.pdb
+
+gmx pdb2gmx -f 1iee_prot4gmx.pdb -o 1iee_init.gro -water tip3p < protonation_gromacs.in
 gmx editconf -f 1iee_init.gro -o 1iee_newbox.gro -bt triclinic -box 7.7061 7.7061 3.7223 -noc
 gmx grompp -f ions.mdp -c 1iee_newbox.gro -p topol.top -o ions.tpr
-gmx genion -s ions.tpr -o 1iee_wions.gro -p topol.top -pname NA -nname CL -neutral -rmin 0.4
-gmx trjconv -f 1iee_wions.gro -s 1iee_wions.gro -o 1iee_wions.pdb
+gmx genion -s ions.tpr -o 1iee_wions.gro -p topol.top -pname NA -nname CL -neutral -rmin 0.25  < genion_gromacs.in
+gmx trjconv -f 1iee_wions.gro -s 1iee_wions.gro -o 1iee_wions.pdb < output_whole_sys0.in
 
 ### add header to the pdb
 

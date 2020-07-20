@@ -1,5 +1,8 @@
-rm ../../run/*
-cp ../*.mdp ../../run
-cp ../*.pdb ../../run
-cp ../*.slurm ../../run
-cp ../*.sh ../../run
+cd ..
+
+rm ../run/*
+cp *.mdp ../run
+cp *.pdb ../run
+cp support/* ../run
+
+cd exe

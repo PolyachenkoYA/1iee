@@ -1,7 +1,5 @@
 #!/bin/bash -f
 
-tmpfile=$(mktemp /tmp/abc-script.XXXXXX)
-
 awk '
 function sub_pair(letter, residue){
     sub(sprintf("H%s2 %s", letter, residue), sprintf("H%s1 %s", letter, residue));
@@ -59,11 +57,11 @@ BEGIN{}
     sub_pair("G", "PRO");
     sub_pair("D", "PRO");
 
+    sub("H1  WAT", "HW1 WAT")
+    sub("H2  WAT", "HW2 WAT")
+    sub("O   WAT", "OW  WAT")
+
     print
 }
-END{}' < $1 > $tmpfile
+END{}' < $1 > $2
 
-rm $1
-mv $tmpfile $1
-
-gmx pdb2gmx -f output.pdb -o 1iee_init.gro -water spce < input_protonation
