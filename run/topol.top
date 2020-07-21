@@ -2,7 +2,7 @@
 ;	File 'topol.top' was generated
 ;	By user: ypolyach (1000)
 ;	On host: ypolyach
-;	At date: Tue Jul 21 10:51:00 2020
+;	At date: Tue Jul 21 11:37:32 2020
 ;
 ;	This is a standalone topology file
 ;
@@ -13,7 +13,7 @@
 ;	Data prefix:  /home/ypolyach/gromacs
 ;	Working dir:  /home/ypolyach/!Norman/Bio/1iee/run
 ;	Command line:
-;	  gmx pdb2gmx -f 1iee_prot4gmx.pdb -o 1iee_init.gro -water spce
+;	  gmx pdb2gmx -f 1iee_prot4gmx.pdb -o 1iee_init.gro -water tip4p -missing
 ;	Force field was read from the standard GROMACS share directory.
 ;
 
@@ -31,7 +31,7 @@
 #include "topol_Protein_chain_H.itp"
 
 ; Include water topology
-#include "amber03.ff/spce.itp"
+#include "amber03.ff/tip4p.itp"
 
 #ifdef POSRES_WATER
 ; Position restraint for each water oxygen
@@ -45,7 +45,7 @@
 
 [ system ]
 ; Name
-Protein in water
+Protein
 
 [ molecules ]
 ; Compound        #mols
@@ -64,6 +64,4 @@ SOL               208
 SOL               208
 SOL               208
 SOL               208
-SOL         120
-CL               88
-SOL              1153
+SOL               208

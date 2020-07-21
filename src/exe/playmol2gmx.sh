@@ -7,7 +7,6 @@ function sub_pair(letter, residue){
 }
 BEGIN{}
 {
-# LYS
     sub_pair("B", "LYS");
     sub_pair("G", "LYS");
     sub_pair("D", "LYS");

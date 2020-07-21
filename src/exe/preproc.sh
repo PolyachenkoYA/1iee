@@ -32,14 +32,14 @@ cd ../../run
 ### this potentially might by done using pythong code given by the website.
 
 
-../src/exe/playmol2gmx.sh 1iee_prot.pdb 1iee_prot4gmx.pdb
+../src/exe/playmol2gmx.sh 1iee_prot_custom.pdb 1iee_prot4gmx.pdb
 
-gmx pdb2gmx -f 1iee_prot4gmx.pdb -o 1iee_init.gro -water spce < protonation_gromacs.in
-gmx editconf -f 1iee_init.gro -o 1iee_newbox.gro -bt triclinic -box 7.7061 7.7061 3.7223 -noc
+gmx pdb2gmx -f 1iee_prot4gmx.pdb -o 1iee_init.gro -water tip4p -missing < protonation_gromacs.in
+gmx editconf -f 1iee_init.gro -o 1iee_newbox.gro -noc
 gmx grompp -f ions.mdp -c 1iee_newbox.gro -p topol.top -o ions.tpr
 gmx genion -s ions.tpr -o 1iee_wions.gro -p topol.top -pname NA -nname CL -neutral -rmin 0.28  < genion_gromacs.in
 #gmx editconf -f 1iee_wions.gro -o 1iee_wions_cent.gro -c
-gmx solvate -cp 1iee_wions.gro -cs spc216.gro -o 1iee_solv.gro -p topol.top
+gmx solvate -cp 1iee_wions.gro -cs tip4p.gro -o 1iee_solv.gro -p topol.top
 
 #################################################
 
