@@ -2,7 +2,7 @@
 ;	File 'topol_Protein_chain_G.itp' was generated
 ;	By user: ypolyach (1000)
 ;	On host: ypolyach
-;	At date: Mon Jul 20 22:51:19 2020
+;	At date: Tue Jul 21 10:51:12 2020
 ;
 ;	This is a include topology file
 ;
@@ -13,7 +13,7 @@
 ;	Data prefix:  /home/ypolyach/gromacs
 ;	Working dir:  /home/ypolyach/!Norman/Bio/1iee/run
 ;	Command line:
-;	  gmx pdb2gmx -f 1iee_prot4gmx.pdb -o 1iee_init.gro -water tip3p
+;	  gmx pdb2gmx -f 1iee_prot4gmx.pdb -o 1iee_init.gro -water spce
 ;	Force field was read from the standard GROMACS share directory.
 ;
 
