@@ -28,22 +28,20 @@ cd ../../run
 # write relative 0 8 pdb/1iee_cryst.pdb
 
 
-### go to website and protonate (prepare protein) -> 1iee_prot.pdb
-### this potentially might by done using pythong code given by the website.
+python ../src/exe/protonate.py 1iee_cryst.pdb 1iee_prot.pdb
+### this can be done on playmolecule/ProteinPrepare website
 
-
-../src/exe/playmol2gmx.sh 1iee_prot_custom.pdb 1iee_prot4gmx.pdb
+../src/exe/playmol2gmx.sh 1iee_prot.pdb 1iee_prot4gmx.pdb
 
 gmx pdb2gmx -f 1iee_prot4gmx.pdb -o 1iee_init.gro -water tip4p -missing < protonation_gromacs.in
-gmx editconf -f 1iee_init.gro -o 1iee_newbox.gro -noc
-gmx grompp -f ions.mdp -c 1iee_newbox.gro -p topol.top -o ions.tpr
+gmx editconf -f 1iee_init.gro -o 1iee_newbox.gro -c -box 7.7061   7.7061   3.7223
+gmx grompp -f ions.mdp -c 1iee_newbox.gro -p topol.top -o ions.tpr -maxwarn 5
 gmx genion -s ions.tpr -o 1iee_wions.gro -p topol.top -pname NA -nname CL -neutral -rmin 0.28  < genion_gromacs.in
-#gmx editconf -f 1iee_wions.gro -o 1iee_wions_cent.gro -c
 gmx solvate -cp 1iee_wions.gro -cs tip4p.gro -o 1iee_solv.gro -p topol.top
 
 #################################################
 
 gmx grompp -f minim.mdp -c 1iee_solv.gro -p topol.top -o em.tpr
 gmx mdrun -v -deffnm em -ntomp 6
-
+gmx trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
 

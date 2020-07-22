@@ -64,3 +64,4 @@ BEGIN{}
 }
 END{}' < $1 > $2
 
+echo "playmolecule2gmx renaming done"

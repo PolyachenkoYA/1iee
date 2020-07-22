@@ -2,7 +2,7 @@
 ;	File 'topol.top' was generated
 ;	By user: ypolyach (1000)
 ;	On host: ypolyach
-;	At date: Tue Jul 21 11:37:32 2020
+;	At date: Wed Jul 22 22:53:31 2020
 ;
 ;	This is a standalone topology file
 ;
@@ -45,7 +45,7 @@
 
 [ system ]
 ; Name
-Protein
+Protein in water
 
 [ molecules ]
 ; Compound        #mols
@@ -64,4 +64,6 @@ SOL               208
 SOL               208
 SOL               208
 SOL               208
-SOL               208
+SOL         120
+CL               88
+SOL              1271

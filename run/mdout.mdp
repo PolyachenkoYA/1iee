@@ -2,7 +2,7 @@
 ;	File 'mdout.mdp' was generated
 ;	By user: ypolyach (1000)
 ;	On host: ypolyach
-;	At date: Tue Jul 21 11:37:47 2020
+;	At date: Wed Jul 22 22:53:51 2020
 ;
 ;	Created by:
 ;	                :-) GROMACS - gmx grompp, 2020.2-UNCHECKED (-:
@@ -11,7 +11,7 @@
 ;	Data prefix:  /home/ypolyach/gromacs
 ;	Working dir:  /home/ypolyach/!Norman/Bio/1iee/run
 ;	Command line:
-;	  gmx grompp -f ions.mdp -c 1iee_newbox.gro -p topol.top -o ions.tpr
+;	  gmx grompp -f minim.mdp -c 1iee_solv.gro -p topol.top -o em.tpr
 
 ; VARIOUS PREPROCESSING OPTIONS
 ; Preprocessor information: use cpp syntax.
@@ -93,7 +93,7 @@ rlist                    = 1
 
 ; OPTIONS FOR ELECTROSTATICS AND VDW
 ; Method for doing electrostatics
-coulombtype              = cutoff
+coulombtype              = PME
 coulomb-modifier         = Potential-shift-Verlet
 rcoulomb-switch          = 0
 rcoulomb                 = 1.0
