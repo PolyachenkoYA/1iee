@@ -2,11 +2,27 @@
 ### '#'   - commands to execute for gmx/chimera
 ### =================================================
 
-omp=$1
-dir_id=$2
-
 set -e
-cd "../../run$2"
+
+argc=$#
+if [ $argc -ne 2 ] && [ $argc -ne 3 ]
+then
+        printf "usage:\n$0   job_name   ompN   [maxsol]\n"
+        exit 1
+fi
+if [ $argc == 3 ]
+then
+	maxsol=$3
+else
+	maxsol=0
+fi
+job_id=$1
+root_path=$(git rev-parse --show-toplevel)
+run_path=run/$job_id
+exe_path=src/exe
+omp=$2
+cd $root_path
+cd $run_path
 
 ### Download 1iee.pdb from database
 
@@ -40,13 +56,15 @@ gmx_mpi pdb2gmx -f 1iee_prot4gmx.pdb -o 1iee_init.gro -water tip4p -missing < pr
 gmx_mpi editconf -f 1iee_init.gro -o 1iee_newbox.gro -c -box 7.7061   7.7061   3.7223
 gmx_mpi grompp -f ions.mdp -c 1iee_newbox.gro -p topol.top -o ions.tpr -maxwarn 5
 gmx_mpi genion -s ions.tpr -o 1iee_wions.gro -p topol.top -pname NA -nname CL -neutral -rmin 0.28  < genion_gromacs.in
-gmx_mpi solvate -cp 1iee_wions.gro -cs tip4p.gro -o 1iee_solv.gro -p topol.top
+gmx_mpi solvate -cp 1iee_wions.gro -cs tip4p.gro -o 1iee_solv.gro -p topol.top -maxsol $maxsol
 
 #################################################
 
-gmx_mpi grompp -f minim.mdp -c 1iee_solv.gro -p topol.top -o em.tpr
-gmx_mpi mdrun -v -deffnm em -ntomp $omp
-gmx_mpi trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
+#gmx_mpi grompp -f minim.mdp -c 1iee_solv.gro -p topol.top -o em.tpr
+#gmx_mpi mdrun -v -deffnm em -ntomp $omp
+#gmx_mpi trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
 
-cd ../src/exe
-./mainrun.sh $omp
+exit 1
+cd $root_path
+cd $exe_path
+./mainrun.sh $job_id $omp $maxsol

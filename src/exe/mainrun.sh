@@ -2,18 +2,27 @@
 
 set -e
 
-omp=$1
-
-cd ../../run
+argc=$#
+if [ $argc -ne 2 ]; then
+        printf "usage:\n$0   job_name   ompN\n"
+        exit 1
+fi
+job_id=$1
+root_path=$(git rev-parse --show-toplevel)
+run_path=run/$job_id
+exe_path=src/exe
+omp=$2
+cd $root_path
+cd $run_path
 
 # ====================================
 
-#gmx_mpi grompp -f minim.mdp -c 1iee_solv.gro -p topol.top -o em.tpr
-#gmx_mpi mdrun -v -deffnm em -ntomp $omp -gpu_id 0 -ntmpi 1
-#gmx_mpi trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
+gmx_mpi grompp -f minim.mdp -c 1iee_solv.gro -p topol.top -o em.tpr
+gmx_mpi mdrun -v -deffnm em -ntomp $omp
+gmx_mpi trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
 
 gmx_mpi grompp -f nvt.mdp -c em.gro -r em.gro -p topol.top -o nvt.tpr
-gmx_mpi mdrun -v -deffnm nvt -ntomp $omp -gpu_id 0 -ntmpi 1
+gmx_mpi mdrun -v -deffnm nvt -ntomp $omp
 gmx_mpi trjconv -s nvt.tpr -f nvt.gro -pbc nojump -o nvt_nojump.gro < output_whole_sys0.in
 
 #gmx_mpi grompp -f npt.mdp -c nvt.gro -r nvt.gro -t nvt.cpt -p topol.top -o npt.tpr
@@ -25,4 +34,5 @@ gmx_mpi trjconv -s nvt.tpr -f nvt.gro -pbc nojump -o nvt_nojump.gro < output_who
 #gmx_mpi trjconv -s md_mainrun.tpr -f md_mainrun.gro -pbc nojump -o md_mainrun_nojump.gro < output_whole_sys0.in
 
 
-cd ../src/exe
+cd $root_path
+cd $exe_path
