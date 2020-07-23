@@ -1,5 +1,5 @@
 title                   = OPLS Lysozyme NPT equilibration 
-define                  = -DPOSRES  ; position restrain the protein
+; define                  = -DPOSRES  ; position restrain the protein
 ; Run parameters
 integrator              = md        ; leap-frog integrator
 nsteps                  = 100000     ; 2 * 100000 = 200 ps
@@ -40,5 +40,6 @@ compressibility         = 4.5e-5                ; isothermal compressibility of 
 refcoord_scaling        = com
 ; Periodic boundary conditions
 pbc                     = xyz       ; 3-D PBC
+periodic-molecules      = yes       ; 
 ; Velocity generation
 gen_vel                 = no        ; Velocity generation is off 

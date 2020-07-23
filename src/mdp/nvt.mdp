@@ -1,5 +1,5 @@
 title                   = AMBER03 Lysozyme NVT equilibration 
-define                  = -DPOSRES  ; position restrain the protein
+; define                  = -DPOSRES  ; position restrain the protein (!!!)
 ; POSRES is the name for the Tutorial but for our 1iee the name happaned to be POSRES as well
 ; Run parameters
 integrator              = md        ; leap-frog integrator
@@ -36,6 +36,7 @@ ref_t                   = 293     293           ; reference temperature, one for
 pcoupl                  = no        ; no pressure coupling in NVT
 ; Periodic boundary conditions
 pbc                     = xyz       ; 3-D PBC
+periodic-molecules      = yes       ; 
 ; Velocity generation
 gen_vel                 = yes       ; assign velocities from Maxwell distribution
 gen_temp                = 293       ; temperature for Maxwell distribution
