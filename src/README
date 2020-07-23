@@ -1,35 +1,9 @@
-typical use:
+    ### typical use:
+
+# chimera, see preproc.sh for details
+cd src/exe
 ./clear_restore.sh
 ./preproc.sh
-#chimera, see preproc.sh for details
-./chem2solv.sh
+    ### not testes from here
 ./mainrun.sh
-wait until mdrun-s are finished
 ./postproc.sh
-
-================================
-
-clear_restore.sh - clear all files from /.. dir, copy all .mdp, .pdb, .slurm files to /..
-
-full_run.py - my attempt to implement full run using 'afterok:ID' slurm feature
-
-mdrun.slurm - sbatch file for an arbitrary md run. 
-Mask : "sbatch mdrun.slurm name #mpi #omp"
-Example : "sbatch mdrun.slurm nvt 2 12" # here nvt will likely be extended to nvt.tpr
-
-preproc.sh - take 1iee.crystall.pdb and create a .gro (and supplimentari files) of a state ready for Emin, nvt, npt and Main run
-
-mainrun.slurm - 
-conduct:
-- relaxations:
-    Epot minimixation Fmax < 1000
-    nvt relaxation 100ps
-    npt relaxation 100ps
-- main run 1 ns
-
-postproc.sh - 
-- PBC discontinuities fix
-- RMSD relative to the t=0 state
-- RMSD relative to the crystall not relaxed state
-- gyration raduis
-
