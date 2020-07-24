@@ -1,4 +1,4 @@
-# This file was created Fri Jul 24 16:16:14 2020
+# This file was created Fri Jul 24 19:43:23 2020
 # Created by:
 #                      :-) GROMACS - gmx energy, 2020.3 (-:
 # 
@@ -9,7 +9,7 @@
 #   gmx_mpi energy -f nvt.edr -o 1274_nvt_T_P.xvg
 # gmx energy is part of G R O M A C S:
 #
-# Guyana Rwanda Oman Macau Angola Cameroon Senegal
+# Gromacs Runs One Microsecond At Cannonball Speeds
 #
 @    title "GROMACS Energies"
 @    xaxis  label "Time (ps)"
