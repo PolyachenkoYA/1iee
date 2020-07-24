@@ -3,6 +3,7 @@
 ### =================================================
 
 set -e
+gmx_exeutable=gmx_mpi
 
 argc=$#
 if [ $argc -ne 2 ] && [ $argc -ne 3 ]
@@ -52,19 +53,18 @@ cd $run_path
 
 # ../src/exe/playmol2gmx.sh 1iee_prot.pdb 1iee_prot4gmx.pdb
 
-gmx_mpi pdb2gmx -f 1iee_prot4gmx.pdb -o 1iee_init.gro -water tip4p -missing < protonation_gromacs.in
-gmx_mpi editconf -f 1iee_init.gro -o 1iee_newbox.gro -c -box 7.7061   7.7061   3.7223
-gmx_mpi grompp -f ions.mdp -c 1iee_newbox.gro -p topol.top -o ions.tpr -maxwarn 5
-gmx_mpi genion -s ions.tpr -o 1iee_wions.gro -p topol.top -pname NA -nname CL -neutral -rmin 0.28  < genion_gromacs.in
-gmx_mpi solvate -cp 1iee_wions.gro -cs tip4p.gro -o 1iee_solv.gro -p topol.top -maxsol $maxsol
+$gmx_exeutable pdb2gmx -f 1iee_prot4gmx.pdb -o 1iee_init.gro -water tip4p -missing < protonation_gromacs.in
+$gmx_exeutable editconf -f 1iee_init.gro -o 1iee_newbox.gro -c -box 7.7061   7.7061   3.7223
+$gmx_exeutable grompp -f ions.mdp -c 1iee_newbox.gro -p topol.top -o ions.tpr -maxwarn 5
+$gmx_exeutable genion -s ions.tpr -o 1iee_wions.gro -p topol.top -pname NA -nname CL -neutral -rmin 0.28  < genion_gromacs.in
+$gmx_exeutable solvate -cp 1iee_wions.gro -cs tip4p.gro -o 1iee_solv.gro -p topol.top -maxsol $maxsol
 
 #################################################
 
-#gmx_mpi grompp -f minim.mdp -c 1iee_solv.gro -p topol.top -o em.tpr
-#gmx_mpi mdrun -v -deffnm em -ntomp $omp
-#gmx_mpi trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
+#$gmx_exeutable grompp -f minim.mdp -c 1iee_solv.gro -p topol.top -o em.tpr
+#$gmx_exeutable mdrun -v -deffnm em -ntomp $omp
+#$gmx_exeutable trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
 
-exit 1
 cd $root_path
 cd $exe_path
-./mainrun.sh $job_id $omp $maxsol
+./mainrun.sh $job_id $omp
