@@ -6,22 +6,27 @@ set -e
 gmx_exeutable=gmx_mpi
 
 argc=$#
-if [ $argc -ne 2 ] && [ $argc -ne 3 ]
+if [ $argc -ne 1 ] && [ $argc -ne 2 ] && [ $argc -ne 3 ]
 then
-        printf "usage:\n$0   job_name   ompN   [maxsol]\n"
+        printf "usage:\n$0   job_name   [maxsol   [start_pdbf_file]]\n"
         exit 1
 fi
-if [ $argc == 3 ]
+if [ $argc -eq 2 ]
 then
-	maxsol=$3
+        maxsol=$2
 else
-	maxsol=0
+        maxsol=0
+fi
+if [ $argc -eq 3 ]
+then
+        start_pdb_file=$3
+else
+        start_pdb_file=1iee_prot4gmx.pdb
 fi
 job_id=$1
 root_path=$(git rev-parse --show-toplevel)
 run_path=run/$job_id
 exe_path=src/exe
-omp=$2
 cd $root_path
 cd $run_path
 
@@ -53,12 +58,12 @@ cd $run_path
 
 # ../src/exe/playmol2gmx.sh 1iee_prot.pdb 1iee_prot4gmx.pdb
 
-$gmx_exeutable pdb2gmx -f 1iee"$job_id"_prot4gmx.pdb -o 1iee_init.gro -water tip4p -missing < protonation_gromacs.in
+$gmx_exeutable pdb2gmx -f $start_pdb_file -o 1iee_init.gro -water tip4p -missing < protonation_gromacs.in
 $gmx_exeutable editconf -f 1iee_init.gro -o 1iee_newbox.gro -c -box 7.7061   7.7061   3.7223
 $gmx_exeutable grompp -f ions.mdp -c 1iee_newbox.gro -p topol.top -o ions.tpr -maxwarn 5
-$gmx_exeutable genion -s ions.tpr -o 1iee_wions.gro -p topol.top -pname NA -nname CL -neutral -rmin 0.28  < genion_gromacs.in
+$gmx_exeutable genion -s ions.tpr -o 1iee_wions.gro -p topol.top -pname NA -nname CL -neutral -rmin 0.2  < genion_gromacs.in
 $gmx_exeutable solvate -cp 1iee_wions.gro -cs tip4p.gro -o 1iee_solv.gro -p topol.top -maxsol $maxsol
 
 cd $root_path
 cd $exe_path
-./mainrun.sh $job_id $omp
+#./mainrun.sh $job_id $omp

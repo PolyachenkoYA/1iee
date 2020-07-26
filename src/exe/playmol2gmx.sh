@@ -32,6 +32,8 @@ BEGIN{}
 
     sub_pair("B", "HIP");
 
+    sub_pair("B", "HID");
+
     sub_pair("B", "ASP");
 
     sub_pair("B", "ASN");

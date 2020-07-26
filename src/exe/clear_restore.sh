@@ -12,7 +12,7 @@ run_path=run/$job_id
 cd $root_path
 
 rm -rf $run_path
-mkdir $run_path
+mkdir -p $run_path
 cp $src_path/*.mdp $run_path
 cp $src_path/*.pdb $run_path
 cp $src_path/*.in $run_path
