@@ -1,3 +1,4 @@
 *.trr
 *.xtc
 run/*
+*__pycache__*

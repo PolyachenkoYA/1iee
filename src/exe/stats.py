@@ -4,6 +4,7 @@ import numpy as np
 import subprocess as sp
 import shutil
 import matplotlib.pyplot as plt
+import mylib as my
 
 import gromacs.formats as gmx
 
@@ -11,7 +12,7 @@ import gromacs.formats as gmx
 root_path = sp.run(['git', 'rev-parse', '--show-toplevel'], stdout=sp.PIPE, text=True).stdout[:-1]  # -1 to cut the '\n'
 run_path = os.path.join(root_path, 'run')
 exe_path = os.path.join(root_path, 'src', 'exe')
-xvgres_path = os.path.join(root_path, 'res', 'xvg')
+default_output_dir = 'xvg'
 gmx_exe = 'gmx_mpi'
 save_mode = 'save'
 draw_mode = 'draw'
@@ -19,49 +20,28 @@ process_mode = 'proc'
 short_mode = 'short'
 temperature_feat_str = 'T'
 pressure_feat_str = 'P'
-modes_flag = '-m'
-features_flag = '-f'
+modes_flag = '-mode'
+features_flag = '-feat'
+def_output_dir_flag = '-dir'
 all_modes = [process_mode, draw_mode, save_mode, short_mode]
 all_features = [temperature_feat_str, pressure_feat_str]
 energy_features_ids = {temperature_feat_str : '15',
                        pressure_feat_str    : '17'}
 
 # ========= path-independent defines =========
+def y_range(y, margin=0.05):
+    mn = min(y)
+    mx = max(y)
+    r = mx - mn
+    return (mn - r * margin, mx + r * margin)
 
-def f2str(x, n=3):
-    return '%s' % float(('%.' + str(n) + 'g') % x)
-
-def get_fig(xlbl, ylbl, title=None, xscl='linear', yscl='linear', projection=None, zscl='linear', zlbl='z'):
-    if(title is None):
-        title = ylbl + '(' + xlbl + ')'
-    fig = plt.figure()
-    ax = fig.gca(projection=projection)
-    plt.title(title)
-    plt.xlabel(xlbl)
-    plt.ylabel(ylbl)
-    plt.xscale(xscl)
-    plt.yscale(yscl)
-    if(projection == '3d'):
-        ax.set_zscale(zscl)
-        ax.set_zlabel(zlbl)
-    return fig, ax
-
-
-def safe_copy(src, dst):
-    os.makedirs(os.path.dirname(dst), exist_ok=True)
-    shutil.copyfile(src, dst)
-
-def index_safe(list, element, default=-1):
-    return list.index(element) if element in list else default
-
+def print_usage_and_exit(exe_name=sys.argv[0], code=1):
+    print('usage:\n' + exe_name + '   [ ' + def_output_dir_flag + ' output_dir (' + default_output_dir + ')]   [' + modes_flag + '    (' + '/'.join(all_modes) + ')]   [' + features_flag + '   (' + '/'.join(all_features) + ')]')
+    exit(code)
 
 # ========= path-dependent defines =========
 
-def print_usage_and_exit(exe_name, code=1):
-    print('usage:\n' + exe_name + '   [' + modes_flag + '    (' + '/'.join(all_modes) + ')]   [' + features_flag + '   (' + '/'.join(all_features) + ')]')
-    exit(code)
-
-def process_model(model_name, trajectory, modes=[process_mode], features=[pressure_feat_str]):
+def process_model(model_name, trajectory, xvgres_path=default_output_dir, modes=[process_mode], features=[pressure_feat_str]):
     model_path = os.path.join(run_path, model_name)
     os.chdir(model_path)
     
@@ -77,7 +57,7 @@ def process_model(model_name, trajectory, modes=[process_mode], features=[pressu
     if(process_mode in modes):
         input_line = ' '.join([energy_features_ids[f] for f in features] + ['0'])
         sp.run([gmx_exe, 'energy', '-f', trajectory + '.edr', '-o', xvg_filename], input=input_line, text=True)
-        safe_copy(xvg_filename, xvg_filepath)
+        my.safe_copy(xvg_filename, xvg_filepath)
         print('"' + xvg_filepath + '" saved')
 
     xvg_file = gmx.XVG()
@@ -96,8 +76,8 @@ def process_model(model_name, trajectory, modes=[process_mode], features=[pressu
         mean_vals[i] = mean_val
         std_vals[i] = val_std
         if(((draw_mode in modes) or (save_mode in modes)) and not (short_mode in modes)):
-            plot_title = '$t_{cut} = ' + f2str(cut_time) + '$; ' + field + ' = $' +  f2str(mean_val) + '\pm' + f2str(val_std) + '$'
-            fig, ax = get_fig('time (ps)', field, title=plot_title)
+            plot_title = '$t_{cut} = ' + my.f2str(cut_time) + '$; ' + field + ' = $' +  my.f2str(mean_val) + '\pm' + my.f2str(val_std) + '$'
+            fig, ax = my.get_fig('time (ps)', field, title=plot_title)
             xvg_file.plot(maxpoints=None, columns=[0, i+1])
             
             if(save_mode in modes):
@@ -109,41 +89,52 @@ def process_model(model_name, trajectory, modes=[process_mode], features=[pressu
 
 
 # ========== arg parse =========
-def pick_args(list, separators, ind):
-    return list[ind+1 : min(separators[separators > ind])]
 
 args = sys.argv[1:]
 argc = len(args)
+if(argc < 2):
+    print_usage_and_exit(sys.argv[0])
 
-mode_args_ind = index_safe(args, modes_flag)
-features_args_ind = index_safe(args, features_flag)
-flags_inds = np.array([mode_args_ind, features_args_ind, len(args)])
-modes = pick_args(args, flags_inds, mode_args_ind)
-features = pick_args(args, flags_inds, features_args_ind)
+[output_dir, modes, features] = my.parse_args([def_output_dir_flag, modes_flag, features_flag])
 features.sort(key = lambda f: int(energy_features_ids[f]))
+print(features)
+exit(1)
+
+if(len(output_dir) == 0):
+    output_dir = default_output_dir
+elif(len(output_dir) == 1):
+    output_dir = output_dir[0]
+else:
+    print_usage_and_exit()
+
 for m in modes:
     if(not (m in all_modes)):
-        print_usage_and_exit(sys.argv[0])
+        print_usage_and_exit()
 for f in features:
     if(not (f in all_features)):
-        print_usage_and_exit(sys.argv[0])
+        print_usage_and_exit()
+res_path = os.path.join(root_path, 'res', output_dir)
 
 # ========== process ===========
 target_pressure = 1
+stab_time = 1000  # ps
 maxsol = [1024, 1088, 1152, 1216, 1274]
 #maxsol = [1024, 1274]
+maxsol = [1053, 1054, 1055, 1056]
+maxsol = [1053, 1054, 1055, 1056, 1024, 1088, 1152, 1216, 1274]
 
 model_names = [str(n) for n in maxsol]
 cut_times = {}
 for m in model_names:
-    cut_times[m] =  1000
+    cut_times[m] =  stab_time
 N_models = len(model_names)
-print(model_names)
+print('models:\n', model_names)
+print('cut time = ', stab_time)
 
 means = [[]] * N_models
 stds = [[]] * N_models
 for i, model_name in enumerate(model_names):
-    means[i], stds[i] = process_model(model_name, 'nvt', modes, features)
+    means[i], stds[i] = process_model(model_name, 'nvt', modes=modes, features=features, xvgres_path=res_path)
 means = np.array(means).T
 stds = np.array(stds).T
 print('values:\n', means)
@@ -153,19 +144,31 @@ pressure_feat_ind = index_safe(features, pressure_feat_str)
 pressure = means[pressure_feat_ind]
 d_pressure = stds[pressure_feat_ind]
 pfit2 = np.polyfit(maxsol, pressure, 2, w=1/d_pressure)
+pfit1 = np.polyfit(maxsol, pressure, 1, w=1/d_pressure)
 x_fit = np.linspace(min(maxsol), max(maxsol), 1000)
-pressure_fit = np.polyval(pfit2, x_fit)
+pressure_fit1 = np.polyval(pfit1, x_fit)
+pfit1[1] -= target_pressure
+target_maxsol1 = np.roots(pfit1)[0]
+slope1 = pfit1[0]
+
+pressure_fit2 = np.polyval(pfit2, x_fit)
 pfit2[2] -= target_pressure
-maxsol_roots = np.roots(pfit2)
-target_maxsol = maxsol_roots[np.argmin(abs(maxsol_roots - maxsol[np.argmin(pressure)]))]
-slope = 2 * pfit2[0] * target_maxsol + pfit2[1]
-print('target maxsol = ', target_maxsol)
-print('slope = ', slope)
+maxsol_roots2 = np.roots(pfit2)
+target_maxsol2 = maxsol_roots2[np.argmin(abs(maxsol_roots2 - maxsol[np.argmin(pressure)]))]
+slope2 = 2 * pfit2[0] * target_maxsol2 + pfit2[1]
+
+print('target maxsol1 = ', target_maxsol1)
+print('slope1 = ', slope1)
+print('target maxsol2 = ', target_maxsol2)
+print('slope2 = ', slope2)
 if((draw_mode in modes) or (save_mode in modes)):
-    fig, ax = get_fig('maxsol', 'Pressure (bar)', title='Pressure(maxsol)')
+    fig, ax = my.get_fig('maxsol', 'Pressure (bar)', title='Pressure(maxsol)')
     ax.errorbar(maxsol, pressure, yerr=d_pressure,
                 marker='o', markerfacecolor='None', linestyle='', color='black')
-    ax.plot(x_fit, pressure_fit, color='black')
+    ax.plot(x_fit, pressure_fit1, color='black', label='lin fit')
+    ax.plot(x_fit, pressure_fit2, '--', color='black', label='q fit')
+    ax.set_ylim(y_range(pressure))
+    ax.legend()
     if(save_mode in modes):
         pic_path = os.path.join(xvgres_path, 'Pressure.jpg')
         plt.savefig(pic_path)

@@ -45,7 +45,7 @@ cd $run_path
 # combine # newchainids true name 1iee_cryst close true
 
 ### write the whole system (all 0-7 groups were encorporated into a single group 0 by 'combine' command above) relative to the outline (group 8)
-# write relative 0 8 pdb/1iee_cryst.pdb
+# write relative 0 8 pdbs/1iee_cryst.pdb
 
 
 # python ../src/exe/protonate.py 1iee_cryst.pdb 1iee_prot.pdb
@@ -53,17 +53,11 @@ cd $run_path
 
 # ../src/exe/playmol2gmx.sh 1iee_prot.pdb 1iee_prot4gmx.pdb
 
-$gmx_exeutable pdb2gmx -f 1iee_prot4gmx.pdb -o 1iee_init.gro -water tip4p -missing < protonation_gromacs.in
+$gmx_exeutable pdb2gmx -f 1iee"$job_id"_prot4gmx.pdb -o 1iee_init.gro -water tip4p -missing < protonation_gromacs.in
 $gmx_exeutable editconf -f 1iee_init.gro -o 1iee_newbox.gro -c -box 7.7061   7.7061   3.7223
 $gmx_exeutable grompp -f ions.mdp -c 1iee_newbox.gro -p topol.top -o ions.tpr -maxwarn 5
 $gmx_exeutable genion -s ions.tpr -o 1iee_wions.gro -p topol.top -pname NA -nname CL -neutral -rmin 0.28  < genion_gromacs.in
 $gmx_exeutable solvate -cp 1iee_wions.gro -cs tip4p.gro -o 1iee_solv.gro -p topol.top -maxsol $maxsol
-
-#################################################
-
-#$gmx_exeutable grompp -f minim.mdp -c 1iee_solv.gro -p topol.top -o em.tpr
-#$gmx_exeutable mdrun -v -deffnm em -ntomp $omp
-#$gmx_exeutable trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
 
 cd $root_path
 cd $exe_path
