@@ -123,8 +123,9 @@ maxsol = [1024, 1088, 1152, 1216, 1274]
 maxsol = [1053, 1054, 1055, 1056]
 maxsol = [1053, 1054, 1055, 1056, 1024, 1088, 1152, 1216, 1274]
 maxsol = [1053, 1054, 1055, 1056, 1024, 1088]
+maxsol = [1040, 1050, 1055, 1060, 1070]
 
-model_names = [str(n) for n in maxsol]
+model_names = [('maxsol' + str(n)) for n in maxsol]
 N_models = len(model_names)
 print('models:\n', model_names)
 print('cut time = ', stab_time)
@@ -168,7 +169,7 @@ if((draw_mode in modes) or (save_mode in modes)):
     ax.set_ylim(y_range(pressure))
     ax.legend()
     if(save_mode in modes):
-        pic_path = os.path.join(xvgres_path, 'Pressure_' + output_dir.replace('/', '_') + '.jpg')
+        pic_path = os.path.join(res_path, 'Pressure_' + output_dir.replace('/', '_') + '.jpg')
         plt.savefig(pic_path)
         print('"' + pic_path + '" saved')
 

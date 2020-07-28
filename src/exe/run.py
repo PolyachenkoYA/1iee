@@ -18,7 +18,7 @@ temperatue_arr = np.array([1, 10, 15, 20, 25, 30, 35, 40]) + 273
 jobs = np.array(['112', '113', '114', '122'])
 
 #maxsol_arr = np.array([1050])
-temperature_arr = np.array([10]) + 273
+temperature_arr = np.array([20]) + 273
 jobs = np.array(['111'])
 
 for j in jobs:
