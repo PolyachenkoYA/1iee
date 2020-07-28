@@ -11,6 +11,7 @@ import scipy
 import scipy.stats as stats
 import pathlib
 import subprocess
+import shutil
 
 error_str = '!!ERROR OCCURED!!'
 my_eps = np.finfo(float).eps * 10
@@ -213,6 +214,10 @@ def parse_args(args, flags):
     return [(arg[0] if(len(arg) == 1) else arg) for arg in flags_args]
 
 def safe_copy(src, dst):
-    os.makedirs(os.path.dirname(dst), exist_ok=True)
-    shutil.copyfile(src, dst)
+    if(src != dst):
+        if(os.path.isfile(dst)):
+            os.remove(dst)
+        else:
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copy2(src, dst)
 
