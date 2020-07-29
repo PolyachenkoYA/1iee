@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -e
-gmx_executable=gmx_mpi
+gmx_executable=gmx
 
 argc=$#
 if [ $argc -ne 2 ]; then
@@ -18,9 +18,11 @@ cd $run_path
 
 # ====================================
 
-$gmx_executable grompp -f minim.mdp -c 1iee_solv.gro -p topol.top -o em.tpr
+$gmx_executable grompp -f minim.mdp -c 1iee_wions.gro -p topol.top -o em.tpr
 $gmx_executable mdrun -v -deffnm em -ntomp $omp
 $gmx_executable trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
+
+exit 0
 
 $gmx_executable grompp -f nvt.mdp -c em.gro -r em.gro -p topol.top -o nvt.tpr
 $gmx_executable mdrun -v -deffnm nvt -ntomp $omp

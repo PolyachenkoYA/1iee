@@ -1,4 +1,5 @@
 set -e
+./playmol2gmx.sh 1iee111_prot.pdb 1iee111_prot4gmx.pdb
 ./playmol2gmx.sh 1iee112_prot.pdb 1iee112_prot4gmx.pdb
 ./playmol2gmx.sh 1iee113_prot.pdb 1iee113_prot4gmx.pdb
 ./playmol2gmx.sh 1iee114_prot.pdb 1iee114_prot4gmx.pdb
