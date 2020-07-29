@@ -208,10 +208,74 @@ def pick_args(list, separators, ind):
 def index_safe(list, element, default=-1):
     return list.index(element) if element in list else default
 
-def parse_args(args, flags):
+def parse_args(args, flags, possible_values=None, possible_arg_numbers=None, auto_exit=None, verbose=True):
+    """
+    possible_values:
+    list of lists of possible values for each args group
+    If(self[i] is None) then any value is permitted
+    
+    possible_arg_numbers:
+    list, len(self)==len(flags)
+    A list of acceptable len(flags_args[i]): return len(flags_args[i]) in self[i]
+    If('+' in self[i]) then len(flags_args[i]) must be > 0
+    If(self[i] is None) then any len(flags_args[i])
+    
+    auto_exit:
+    list of exit codes to return in case arguments for the i-th flags are invalid
+    If(self[i] is None) then don't exit of invalid arguments
+    If(self is int) then self = [self] * N
+    """
+    N_flags = len(flags)
+    if(possible_values is None):
+        possible_values = [None] * N_flags
+    if(possible_arg_numbers is None):
+        possible_arg_numbers = [None] * N_flags
+    if(auto_exit is None):
+        auto_exit = 1
+    if(isinstance(auto_exit, int)):
+        auto_exit = [auto_exit] * N_flags
+    correct_input = [True] * N_flags
+
+    if(len(possible_values) != len(flags)):
+        if(verbose):
+            print(error_str + '\npossible_values: ', possible_values, '\nflags:', flags, '\nThey must have the same size', file=sys.stderr)
+        correct_input = [False] * N_flags
+    if(len(possible_arg_numbers) != len(flags)):
+        if(verbose):
+            print(error_str + '\npossible_arg_numbers: ', possible_arg_numbers, '\nflags:', flags, '\nThey must have the same size', file=sys.stderr)
+        correct_input = [False] * N_flags
+    if(len(auto_exit) != len(flags)):
+        if(verbose):
+            print(error_str + '\nauto_exit: ', auto_exit, '\nflags:', flags, '\nThey must have the same size', file=sys.stderr)
+        correct_input = [False] * N_flags
+
     flags_positions = np.array([index_safe(args, flag) for flag in flags] + [len(args)])
     flags_args = [pick_args(args, flags_positions, f_pos) for f_pos in flags_positions[:-1]]
-    return [(arg[0] if(len(arg) == 1) else arg) for arg in flags_args]
+    for i in range(N_flags):
+        if((not possible_arg_numbers[i] is None) and correct_input[i]):
+            correct_input[i] = (len(flags_args[i]) > 0)  if('+' in possible_arg_numbers[i]) else (len(flags_args[i]) in possible_arg_numbers[i])
+            if(not correct_input[i]):
+                if(verbose):
+                    print(error_str + '\nflags_args[', i, ']: ', flags_args[i], '\npossible arguments numbers:', possible_arg_numbers[i], file=sys.stderr)
+        if((not possible_values[i] is None) and correct_input[i]):
+            for v in flags_args[i]:
+                correct_input[i] = v in possible_values[i]
+                if(not correct_input[i]):
+                    flags_args[i] = [v]
+                    break
+
+    for i in range(N_flags):
+        if(not possible_arg_numbers[i] is None):
+            if((len(possible_arg_numbers[i]) == 1) and (possible_arg_numbers[i][0] == 1) and correct_input[i]):
+                flags_args[i] = flags_args[i][0]
+
+    for i,f in enumerate(flags_args):
+        if((not auto_exit[i] is None) and (not correct_input[i])):
+            if(verbose):
+                print(error_str + '\nparameter ', flags_args[i], ' for the "', flags[i], '" is invalid')
+            sys.exit(auto_exit[i])
+
+    return flags_args, correct_input
 
 def safe_copy(src, dst):
     if(src != dst):

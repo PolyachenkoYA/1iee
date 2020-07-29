@@ -11,13 +11,13 @@ then
         printf "usage:\n$0   job_name   [maxsol   [start_pdbf_file]]\n"
         exit 1
 fi
-if [ $argc -eq 2 ]
+if [ $argc -gt 1 ]
 then
         maxsol=$2
 else
         maxsol=0
 fi
-if [ $argc -eq 3 ]
+if [ $argc -gt 2 ]
 then
         start_pdb_file=$3
 else

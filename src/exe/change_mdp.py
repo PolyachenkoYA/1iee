@@ -5,8 +5,10 @@ import numpy as np
 import mylib as my
 import re
 
-def print_usage_and_exit(exe_name=sys.argv[0], exit_code=1):
+def print_usage_and_exit(exe_name=sys.argv[0], exit_code=1, str=''):
     print('usage:\n' + exe_name + '   ' + infile_flag + ' infile   ' + outfile_flag + ' outfile   ' + fields_flag + ' field1 value1 [f2 v2 ...]')
+    if(str != ''):
+        print(str)
     exit(exit_code)
 
 # ============= consts ==============
@@ -20,11 +22,12 @@ argc = len(args)
 if(np.mod(argc, 2) != 1):
     print_usage_and_exit()
 
-[infile_name, outfile_name, fields] = my.parse_args(args, [infile_flag, outfile_flag, fields_flag])
-if(np.any([(len(i) == 0) for i in [infile_name, outfile_name, fields]])):
-    print_usage_and_exit()
+[infile_name, outfile_name, fields], correct_input = \
+    my.parse_args(args, \
+                  [infile_flag, outfile_flag, fields_flag],
+                  possible_arg_numbers=[[1], [1], ['+']])
 if(np.mod(len(fields), 2) != 0):
-    print_usage_and_exit()
+    print_usage_and_exit(str='fields "' + str(fields) + '" are invalid')
 
 fields = np.array(fields).reshape((len(fields) // 2), 2)
 

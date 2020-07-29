@@ -12,6 +12,7 @@ import gromacs.formats as gmx
 root_path = sp.run(['git', 'rev-parse', '--show-toplevel'], stdout=sp.PIPE, text=True).stdout[:-1]  # -1 to cut the '\n'
 run_path = os.path.join(root_path, 'run')
 exe_path = os.path.join(root_path, 'src', 'exe')
+res_path = os.path.join(root_path, 'res')
 default_output_dir = 'xvg'
 gmx_exe = 'gmx_mpi'
 save_mode = 'save'
@@ -22,7 +23,7 @@ temperature_feat_str = 'T'
 pressure_feat_str = 'P'
 modes_flag = '-mode'
 features_flag = '-feat'
-def_output_dir_flag = '-dir'
+output_dir_flag = '-dir'
 all_modes = [process_mode, draw_mode, save_mode, short_mode]
 all_features = [temperature_feat_str, pressure_feat_str]
 energy_features_ids = {temperature_feat_str : '15',
@@ -36,7 +37,7 @@ def y_range(y, margin=0.05):
     return (mn - r * margin, mx + r * margin)
 
 def print_usage_and_exit(str='', exe_name=sys.argv[0], code=1):
-    print('usage:\n' + exe_name + '   [ ' + def_output_dir_flag + ' output_dir (' + default_output_dir + ')]   [' + modes_flag + '    (' + '/'.join(all_modes) + ')]   [' + features_flag + '   (' + '/'.join(all_features) + ')]')
+    print('usage:\n' + exe_name + '   ' + output_dir_flag + ' output_dir   [' + modes_flag + '    (' + '/'.join(all_modes) + ')]   [' + features_flag + '   (' + '/'.join(all_features) + ')]')
     if(str != ''):
         print(str)
     exit(code)
@@ -93,26 +94,24 @@ def process_model(model_path, trajectory, cut_time, xvgres_path=default_output_d
 
 args = sys.argv[1:]
 argc = len(args)
-if(argc < 2):
+if(argc < 6):
     print_usage_and_exit()
 
-[output_dir, modes, features] = my.parse_args(args, [def_output_dir_flag, modes_flag, features_flag])
-if(isinstance(features, str)):
-    features = [features]
+[output_dir, modes, features], correct_input = \
+    my.parse_args(args, \
+                  [output_dir_flag, modes_flag, features_flag], \
+                  possible_values=[None, all_modes, all_features], \
+                  possible_arg_numbers=[[1], ['+'], [1, 2]])
 features.sort(key = lambda f: int(energy_features_ids[f]))
 
-if(len(output_dir) == 0):
-    output_dir = default_output_dir
-elif(not isinstance(output_dir, str)):
-    print_usage_and_exit(str='output dir "' + output_dir + '" is invalid')
+#if(not correct_input[0]):
+#    print_usage_and_exit(str='output dir "' + str(output_dir) + '" is invalid')
+#if(not correct_input[1]):
+#    print_usage_and_exit(str='mode "' + str(modes) + '" is invalid')
+#if(not correct_input[2]):
+#    print_usage_and_exit(str='feaute "' + str(features) + '" is invalid')
 
-for m in modes:
-    if(not (m in all_modes)):
-        print_usage_and_exit(str='mode "' + m + '" is invalid')
-for f in features:
-    if(not (f in all_features)):
-        print_usage_and_exit(str='feature "' + f + '" is invalid')
-res_path = os.path.join(root_path, 'res', output_dir)
+model_res_path = os.path.join(res_path, output_dir)
 model_path = os.path.join(run_path, output_dir)
 
 # ========== process ===========
@@ -133,7 +132,7 @@ print('cut time = ', stab_time)
 means = [[]] * N_models
 stds = [[]] * N_models
 for i, model_name in enumerate(model_names):
-    means[i], stds[i] = process_model(os.path.join(output_dir, model_name), 'nvt', stab_time, modes=modes, features=features, xvgres_path=res_path)
+    means[i], stds[i] = process_model(os.path.join(output_dir, model_name), 'nvt', stab_time, modes=modes, features=features, xvgres_path=model_res_path)
 means = np.array(means).T
 stds = np.array(stds).T
 print('values:\n', means)
@@ -169,7 +168,7 @@ if((draw_mode in modes) or (save_mode in modes)):
     ax.set_ylim(y_range(pressure))
     ax.legend()
     if(save_mode in modes):
-        pic_path = os.path.join(res_path, 'Pressure_' + output_dir.replace('/', '_') + '.jpg')
+        pic_path = os.path.join(model_res_path, 'Pressure_' + output_dir.replace('/', '_') + '.jpg')
         plt.savefig(pic_path)
         print('"' + pic_path + '" saved')
 
