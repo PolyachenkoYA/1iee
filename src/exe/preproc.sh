@@ -4,7 +4,7 @@
 ### =================================================
 
 set -e
-gmx_exeutable=gmx
+gmx_exeutable=gmx_mpi
 
 argc=$#
 if [ $argc -ne 1 ] && [ $argc -ne 4 ] && [ $argc -ne 5 ] && [ $argc -ne 6 ]
