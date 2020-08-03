@@ -15,7 +15,8 @@ exe_path = os.path.join(root_path, 'src', 'exe')
 res_path = os.path.join(root_path, 'res')
 default_output_dir = 'xvg'
 gmx_exe = 'gmx_mpi'
-gmx_exe = 'gmx_angara'
+#gmx_exe = 'gmx_angara'
+#gmx_exe = 'gmx'
 save_mode = 'save'
 draw_mode = 'draw'
 process_mode = 'proc'
@@ -174,9 +175,14 @@ if((draw_mode in modes) or (save_mode in modes)):
     ax.set_ylim(y_range(pressure))
     ax.legend()
     if(save_mode in modes):
-        pic_path = os.path.join(model_res_path, 'Pressure_' + output_dir.replace('/', '_') + '.jpg')
+        pic_path = os.path.join(os.path.join(res_path, os.path.dirname(output_dir)), 'Pressure_' + output_dir.replace('/', '_') + '.jpg')
         plt.savefig(pic_path)
         print('"' + pic_path + '" saved')
+        maxsol_filename = os.path.join(res_path, os.path.dirname(output_dir) + '.txt')
+        with open(maxsol_filename, 'a') as outfile:
+            print(maxsol_filename, 'appended')
+            #print(my.f2str(target_maxsol1, 4), file=outfile, end=', ')
+            print(target_maxsol1, file=outfile, end=', ')
 
     if(draw_mode in modes):
         plt.show()
