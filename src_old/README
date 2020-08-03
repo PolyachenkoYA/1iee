@@ -1,0 +1,9 @@
+    ### typical use:
+
+# chimera, see preproc.sh for details
+cd src/exe
+./clear_restore.sh
+./preproc.sh
+    ### not testes from here
+./mainrun.sh
+./postproc.sh

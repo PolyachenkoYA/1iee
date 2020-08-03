@@ -3,7 +3,7 @@ title                   = AMBER03 Lysozyme NVT equilibration
 ; POSRES is the name for the Tutorial but for our 1iee the name happaned to be POSRES as well
 ; Run parameters
 integrator              = md        ; leap-frog integrator
-nsteps                  = 2500000     ; 2 * 2500000 = 5 ns
+nsteps                  = 1000000     ; 2 * 1000000 = 2 ns
 dt                      = 0.002     ; 2 fs
 ; Output control
 nstxout                 = 500       ; save coordinates every 1.0 ps

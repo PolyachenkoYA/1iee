@@ -285,3 +285,5 @@ def safe_copy(src, dst):
             os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copy2(src, dst)
 
+def git_root_path():
+    return subprocess.run(['git', 'rev-parse', '--show-toplevel'], stdout=subprocess.PIPE).stdout.decode('utf-8')[:-1]

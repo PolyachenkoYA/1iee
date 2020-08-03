@@ -27,7 +27,7 @@ maxsol_arr = np.array([[1112, 1122, 1127, 1132, 1142],
                        [1007, 1017, 1022, 1027, 1032],
                        [995 , 1005, 1010, 1015, 1025]])
 
-jobs = np.array([[1, 2, 2]])
+#jobs = np.array([[1, 2, 2]])
 #temperature_arr = np.array([20]) + 273
 #maxsol_arr = np.array([1050])
 

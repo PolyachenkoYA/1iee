@@ -9,12 +9,13 @@ import mylib as my
 import gromacs.formats as gmx
 
 # ========== paths ============
-root_path = sp.run(['git', 'rev-parse', '--show-toplevel'], stdout=sp.PIPE, text=True).stdout[:-1]  # -1 to cut the '\n'
+root_path = my.git_root_path()
 run_path = os.path.join(root_path, 'run')
 exe_path = os.path.join(root_path, 'src', 'exe')
 res_path = os.path.join(root_path, 'res')
 default_output_dir = 'xvg'
 gmx_exe = 'gmx_mpi'
+gmx_exe = 'gmx_angara'
 save_mode = 'save'
 draw_mode = 'draw'
 process_mode = 'proc'
@@ -24,6 +25,7 @@ pressure_feat_str = 'P'
 modes_flag = '-mode'
 features_flag = '-feat'
 output_dir_flag = '-dir'
+maxsol_prefix = 'maxsol'
 all_modes = [process_mode, draw_mode, save_mode, short_mode]
 all_features = [temperature_feat_str, pressure_feat_str]
 energy_features_ids = {temperature_feat_str : '15',
@@ -123,8 +125,12 @@ maxsol = [1053, 1054, 1055, 1056]
 maxsol = [1053, 1054, 1055, 1056, 1024, 1088, 1152, 1216, 1274]
 maxsol = [1053, 1054, 1055, 1056, 1024, 1088]
 maxsol = [1040, 1050, 1055, 1060, 1070]
+maxsol = []
 
-model_names = [('maxsol' + str(n)) for n in maxsol]
+if(len(maxsol) == 0):
+    maxsol = [int(maxsol_dir[len(maxsol_prefix):]) for maxsol_dir in os.listdir(os.path.join(run_path, output_dir))]
+    
+model_names =  [(maxsol_prefix + str(n)) for n in maxsol]
 N_models = len(model_names)
 print('models:\n', model_names)
 print('cut time = ', stab_time)
