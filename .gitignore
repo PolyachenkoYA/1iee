@@ -2,3 +2,4 @@
 *.xtc
 run/*
 *__pycache__*
+*~
