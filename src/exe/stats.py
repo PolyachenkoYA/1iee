@@ -119,7 +119,7 @@ model_path = os.path.join(run_path, output_dir)
 
 # ========== process ===========
 target_pressure = 1
-stab_time = 1000  # ps
+stab_time = 350  # ps
 maxsol = [1024, 1088, 1152, 1216, 1274]
 #maxsol = [1024, 1274]
 maxsol = [1053, 1054, 1055, 1056]
@@ -178,7 +178,7 @@ if((draw_mode in modes) or (save_mode in modes)):
         pic_path = os.path.join(os.path.join(res_path, os.path.dirname(output_dir)), 'Pressure_' + output_dir.replace('/', '_') + '.jpg')
         plt.savefig(pic_path)
         print('"' + pic_path + '" saved')
-        maxsol_filename = os.path.join(res_path, os.path.dirname(output_dir) + '.txt')
+        maxsol_filename = os.path.join(res_path, os.path.dirname(output_dir) + '_' + str(stab_time) + '.txt')
         with open(maxsol_filename, 'a') as outfile:
             print(maxsol_filename, 'appended')
             #print(my.f2str(target_maxsol1, 4), file=outfile, end=', ')
