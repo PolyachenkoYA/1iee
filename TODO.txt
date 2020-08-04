@@ -1,3 +1,4 @@
 TODO:
 - git on computational cores on desmos
 - git on host-gpu on fisher
+- gmx_mpi fails on fisher

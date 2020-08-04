@@ -25,12 +25,11 @@ cd $run_path
 
 # ====================================
 
-#$gmx_executable grompp -f minim.mdp -c 1iee_wions.gro -p topol.top -o em.tpr
-#$gmx_executable mdrun -v -deffnm em -ntomp $omp -gpu_id $gpu_id -pin on
-#$gmx_executable trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
+$gmx_executable grompp -f minim.mdp -c 1iee_wions.gro -p topol.top -o em.tpr
+$gmx_executable mdrun -v -deffnm em -ntomp $omp -gpu_id $gpu_id -pin on
+$gmx_executable trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
 
-#$gmx_executable grompp -f nvt.mdp -c em.gro -r em.gro -p topol.top -o nvt.tpr
-#exit 0
+$gmx_executable grompp -f nvt.mdp -c em.gro -r em.gro -p topol.top -o nvt.tpr
 $gmx_executable mdrun -v -deffnm nvt -ntomp $omp -gpu_id $gpu_id -nsteps 1000000
 $gmx_executable trjconv -s em.tpr -f nvt.gro -pbc nojump -o nvt_nojump.gro < output_whole_sys0.in
 

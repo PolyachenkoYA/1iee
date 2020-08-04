@@ -15,13 +15,19 @@ exe_path = os.path.join(root_path, 'src', 'exe')
 res_path = os.path.join(root_path, 'res')
 args = sys.argv[1:]
 
-#for i in range(1, 3):
+# =============== launch tasks =========
+#for i in range(1, 5):
 #    run_str = 'run' + str(i) + '.py'
-    #run_it('sbatch -J gmx_' + str(i) + ' -p max8n -N 8 --ntasks-per-node=1 --gres=gpu:1 --wrap="python ' + run_str + '"', shell=True)
+#    #run_it('sbatch -J gmx_' + str(i) + ' -p max8n -N 8 --ntasks-per-node=1 --gres=gpu:1 --wrap="python ' + run_str + '"', shell=True)
 #    run_it("screen -d -m -S " + run_str + " bash -c 'python " + run_str + "'", shell=True)
 
-t_arr = [274, 283, 288, 293, 298, 303, 308, 313]
-#t_arr = [274, 283]
+# ================ extract  maxsol_0 for the matlab plotting ===============
+if(not len(args) in [1]):
+    print('usage:\n' + sys.argv[0] + '   job_dir')
+    exit(1)
+
+t_arr = [1, 10, 15, 20, 25, 30, 35, 40]
+#t_arr = [1]
 job_name = args[0]
 txt_datafile_path = os.path.join(res_path, job_name + '.txt')
 if(os.path.isfile(txt_datafile_path)):
