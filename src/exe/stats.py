@@ -119,7 +119,7 @@ model_path = os.path.join(run_path, output_dir)
 
 # ========== process ===========
 target_pressure = 1
-stab_time = 350  # ps
+stab_time = 1000  # ps
 maxsol = [1024, 1088, 1152, 1216, 1274]
 #maxsol = [1024, 1274]
 maxsol = [1053, 1054, 1055, 1056]
