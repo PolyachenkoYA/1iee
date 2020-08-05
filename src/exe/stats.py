@@ -26,11 +26,13 @@ pressure_feat_str = 'P'
 modes_flag = '-mode'
 features_flag = '-feat'
 output_dir_flag = '-dir'
+stab_time_flag = '-stab_time'
 maxsol_prefix = 'maxsol'
 all_modes = [process_mode, draw_mode, save_mode, short_mode]
 all_features = [temperature_feat_str, pressure_feat_str]
 energy_features_ids = {temperature_feat_str : '15',
                        pressure_feat_str    : '17'}
+stab_time_default = 1000
 
 # ========= path-independent defines =========
 def y_range(y, margin=0.05):
@@ -39,10 +41,14 @@ def y_range(y, margin=0.05):
     r = mx - mn
     return (mn - r * margin, mx + r * margin)
 
-def print_usage_and_exit(str='', exe_name=sys.argv[0], code=1):
-    print('usage:\n' + exe_name + '   ' + output_dir_flag + ' output_dir   [' + modes_flag + '    (' + '/'.join(all_modes) + ')]   [' + features_flag + '   (' + '/'.join(all_features) + ')]')
-    if(str != ''):
-        print(str)
+def print_usage_and_exit(custom_str='', exe_name=sys.argv[0], code=1):
+    print('usage:\n' + exe_name + '   ' + \
+                       output_dir_flag + ' output_dir   ' + \
+                 '[' + modes_flag + '    (' + '/'.join(all_modes) + ')]   ' + \
+                 '[' + features_flag + '   (' + '/'.join(all_features) + ')]   ' + \
+                 '[' + stab_time_flag + '   stab_time (' + str(stab_time_default) + ')]')
+    if(custom_str != ''):
+        print(custom_str)
     exit(code)
 
 # ========= path-dependent defines =========
@@ -84,6 +90,7 @@ def process_model(model_path, trajectory, cut_time, xvgres_path=default_output_d
             plot_title = '$t_{cut} = ' + my.f2str(cut_time) + '$; ' + field + ' = $' +  my.f2str(mean_val) + '\pm' + my.f2str(val_std) + '$'
             fig, ax = my.get_fig('time (ps)', field, title=plot_title)
             xvg_file.plot(maxpoints=None, columns=[0, i+1])
+            ax.plot(np.array([1, 1]) * cut_time, [min(data[i]), max(data[i])], color='red')
             
             if(save_mode in modes):
                 pic_path = os.path.join(xvgres_path, base_filename + '_' + field + '.jpg')
@@ -100,26 +107,19 @@ argc = len(args)
 if(argc < 6):
     print_usage_and_exit()
 
-[output_dir, modes, features], correct_input = \
+[output_dir, modes, features, stab_time], correct_input = \
     my.parse_args(args, \
-                  [output_dir_flag, modes_flag, features_flag], \
-                  possible_values=[None, all_modes, all_features], \
-                  possible_arg_numbers=[[1], ['+'], [1, 2]])
+                  [output_dir_flag, modes_flag, features_flag, stab_time_flag], \
+                  possible_values=[None, all_modes, all_features, None], \
+                  possible_arg_numbers=[[1], ['+'], [1, 2], [0, 1]])
 features.sort(key = lambda f: int(energy_features_ids[f]))
-
-#if(not correct_input[0]):
-#    print_usage_and_exit(str='output dir "' + str(output_dir) + '" is invalid')
-#if(not correct_input[1]):
-#    print_usage_and_exit(str='mode "' + str(modes) + '" is invalid')
-#if(not correct_input[2]):
-#    print_usage_and_exit(str='feaute "' + str(features) + '" is invalid')
+stab_time = int(stab_time[0]) if len(stab_time) > 0 else stab_time_default
 
 model_res_path = os.path.join(res_path, output_dir)
 model_path = os.path.join(run_path, output_dir)
 
 # ========== process ===========
 target_pressure = 1
-stab_time = 350  # ps
 maxsol = [1024, 1088, 1152, 1216, 1274]
 #maxsol = [1024, 1274]
 maxsol = [1053, 1054, 1055, 1056]
@@ -180,9 +180,8 @@ if((draw_mode in modes) or (save_mode in modes)):
         print('"' + pic_path + '" saved')
         maxsol_filename = os.path.join(res_path, os.path.dirname(output_dir) + '_' + str(stab_time) + '.txt')
         with open(maxsol_filename, 'a') as outfile:
+            print(target_maxsol1, file=outfile, end=' ')
             print(maxsol_filename, 'appended')
-            #print(my.f2str(target_maxsol1, 4), file=outfile, end=', ')
-            print(target_maxsol1, file=outfile, end=', ')
 
     if(draw_mode in modes):
         plt.show()

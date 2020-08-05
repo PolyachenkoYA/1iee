@@ -22,15 +22,35 @@ args = sys.argv[1:]
 #    run_it("screen -d -m -S " + run_str + " bash -c 'python " + run_str + "'", shell=True)
 
 # ================ extract  maxsol_0 for the matlab plotting ===============
-if(not len(args) in [1]):
-    print('usage:\n' + sys.argv[0] + '   job_dir')
+#if(not len(args) in [1, 2]):
+#    print('usage:\n' + sys.argv[0] + '   job_dir   [stab_time(1000)]')
+#    exit(1)
+#job_name = args[0]
+#stab_time = 1000 if(len(args) < 2) else float(args[1])
+#
+#t_arr = [1, 10, 15, 20, 25, 30, 35, 40]
+#txt_datafile_path = os.path.join(res_path, job_name + '_' + str(350) + '.txt')
+#if(os.path.isfile(txt_datafile_path)):
+#    os.remove(txt_datafile_path)
+#for t in t_arr:
+#    run_it('python stats.py -dir ' + os.path.join(job_name, 't' + str(t)) + ' -mode short save -feat P -stab_time ' + str(stab_time), shell=True)
+
+# ================ post proc all ===============
+if(not len(args) in [0]):
+    print('usage:\n' + sys.argv[0])
     exit(1)
 
+job_names = ['job111', 'job112', 'job113']
+stab_times = [200, 400, 600, 800, 1000]
 t_arr = [1, 10, 15, 20, 25, 30, 35, 40]
-#t_arr = [1]
-job_name = args[0]
-txt_datafile_path = os.path.join(res_path, job_name + '.txt')
-if(os.path.isfile(txt_datafile_path)):
-    os.remove(txt_datafile_path)
-for t in t_arr:
-    run_it('python stats.py -dir ' + os.path.join(job_name, 't' + str(t)) + ' -mode short save -feat P', shell=True)
+
+#job_names = ['job111', 'job112']
+#stab_times = [600, 800]
+
+for job_name in job_names:
+    for stab_time in stab_times:
+        txt_datafile_path = os.path.join(res_path, job_name + '_' + str(stab_time) + '.txt')
+        if(os.path.isfile(txt_datafile_path)):
+            os.remove(txt_datafile_path)
+        for t in t_arr:
+            run_it('python stats.py -dir ' + os.path.join(job_name, 't' + str(t)) + ' -mode short save -feat P -stab_time ' + str(stab_time), shell=True)
