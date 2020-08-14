@@ -4,8 +4,10 @@
 ### =================================================
 
 set -e
-gmx_exeutable=gmx_mpi
-#gmx_exeutable=gmx_angara
+gmx_serial=gmx_ser_gpu
+gmx_mdrun=gmx_mpi
+gmx_mdrun=gmx_angara
+gmx_mdrun=$gmx_serial
 
 argc=$#
 if [ $argc -ne 1 ] && [ $argc -ne 4 ] && [ $argc -ne 5 ] && [ $argc -ne 6 ]
@@ -75,11 +77,11 @@ cd $run_path
 
 # ../src/exe/playmol2gmx.sh 1iee_prot.pdb 1iee_prot4gmx.pdb
 
-$gmx_exeutable pdb2gmx -f $start_pdb_file -o 1iee_init.gro -water tip4p -missing < protonation_gromacs.in
-$gmx_exeutable editconf -f 1iee_init.gro -o 1iee_newbox.gro -c -box $lx $ly $lz
-$gmx_exeutable solvate -cp 1iee_newbox.gro -cs tip4p.gro -o 1iee_solv.gro -p topol.top -maxsol $maxsol
-$gmx_exeutable grompp -f ions.mdp -c 1iee_solv.gro -p topol.top -o 1iee_wions.tpr -maxwarn 5
-$gmx_exeutable genion -s 1iee_wions.tpr -o 1iee_wions.gro -p topol.top -pname NA -nname CL -neutral -rmin 0.2  < genion_gromacs.in
+$gmx_serial pdb2gmx -f $start_pdb_file -o 1iee_init.gro -water tip4p -missing < protonation_gromacs.in
+$gmx_serial editconf -f 1iee_init.gro -o 1iee_newbox.gro -c -box $lx $ly $lz
+$gmx_serial solvate -cp 1iee_newbox.gro -cs tip4p.gro -o 1iee_solv.gro -p topol.top -maxsol $maxsol
+$gmx_serial grompp -f ions.mdp -c 1iee_solv.gro -p topol.top -o 1iee_wions.tpr -maxwarn 5
+$gmx_serial genion -s 1iee_wions.tpr -o 1iee_wions.gro -p topol.top -pname NA -nname CL -neutral -rmin 0.2  < genion_gromacs.in
 
 cd $root_path
 cd $exe_path

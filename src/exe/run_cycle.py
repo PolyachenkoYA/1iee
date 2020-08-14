@@ -16,10 +16,11 @@ res_path = os.path.join(root_path, 'res')
 args = sys.argv[1:]
 
 # =============== launch tasks =========
-#for i in range(1, 5):
-#    run_str = 'run' + str(i) + '.py'
-#    #run_it('sbatch -J gmx_' + str(i) + ' -p max8n -N 8 --ntasks-per-node=1 --gres=gpu:1 --wrap="python ' + run_str + '"', shell=True)
-#    run_it("screen -d -m -S " + run_str + " bash -c 'python " + run_str + "'", shell=True)
+#for job_i in range(3):
+#    for temp_i in range(2,3):
+#        run_it('sbatch --reservation=test -J gromacs' + str(i) + ' -p max1n -N 1 --ntasks-per-node=1 --gres=gpu:1 --wrap="python run.py -omp 6 -continue 1 -temp_ids ' + str(temp_i) + ' -job_ids ' + str(job_i) + '"', shell=True)
+        #run_it("screen -d -m -S " + run_str + " bash -c 'python " + run_str + "'", shell=True)
+# sbatch --reservation=test -J gromacs1 -p max1n -N 1 --ntasks-per-node=1 --gres=gpu:1 --wrap="python run.py"
 
 # ================ extract  maxsol_0 for the matlab plotting ===============
 #if(not len(args) in [1, 2]):
@@ -40,7 +41,7 @@ if(not len(args) in [0]):
     print('usage:\n' + sys.argv[0])
     exit(1)
 
-job_names = ['job111', 'job112', 'job113']
+job_names = ['job111', 'job112', 'job113', 'job114']
 stab_times = [200, 400, 600, 800, 1000]
 t_arr = [1, 10, 15, 20, 25, 30, 35, 40]
 

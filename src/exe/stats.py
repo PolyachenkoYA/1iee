@@ -16,7 +16,7 @@ res_path = os.path.join(root_path, 'res')
 default_output_dir = 'xvg'
 gmx_exe = 'gmx_mpi'
 #gmx_exe = 'gmx_angara'
-#gmx_exe = 'gmx'
+gmx_exe = 'gmx_serial'
 save_mode = 'save'
 draw_mode = 'draw'
 process_mode = 'proc'
@@ -68,7 +68,9 @@ def process_model(model_path, trajectory, cut_time, xvgres_path=default_output_d
 
     if(process_mode in modes):
         input_line = ' '.join([energy_features_ids[f] for f in features] + ['0'])
-        sp.run([gmx_exe, 'energy', '-f', trajectory + '.edr', '-o', xvg_filename], input=input_line, text=True)
+        cmd = [gmx_exe, 'energy', '-f', trajectory + '.edr', '-o', xvg_filename]
+        print(cmd)
+        sp.run(cmd, input=input_line, text=True)
         my.safe_copy(xvg_filename, xvg_filepath)
         print('"' + xvg_filepath + '" saved')
 

@@ -1,15 +1,15 @@
-# This file was created Tue Aug  4 22:54:46 2020
+# This file was created Fri Aug 14 20:54:35 2020
 # Created by:
-#                      :-) GROMACS - gmx energy, 2019.4 (-:
+#                       :-) GROMACS - gmx energy, 2019 (-:
 # 
-# Executable:   /home/polyachenkoya/.localn/bin/gmx_mpi
-# Data prefix:  /home/polyachenkoya/.localn
-# Working dir:  /home/polyachenkoya/1iee/run/job112/t15/maxsol1085
+# Executable:   /home/polyachenkoya/.local/bin/gmx_serial
+# Data prefix:  /home/polyachenkoya/.local
+# Working dir:  /mnt/storage/home/polyachenkoya/1iee/run/job112/t15/maxsol1085
 # Command line:
-#   gmx_mpi energy -f nvt.edr -o job112_t15_maxsol1085_nvt_P.xvg
+#   gmx_serial energy -f nvt.edr -o job112_t15_maxsol1085_nvt_P.xvg
 # gmx energy is part of G R O M A C S:
 #
-# Green Red Orange Magenta Azure Cyan Skyblue
+# Good gRace! Old Maple Actually Chews Slate
 #
 @    title "GROMACS Energies"
 @    xaxis  label "Time (ps)"
