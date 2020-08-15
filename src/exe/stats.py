@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 import numpy as np
 import subprocess as sp
 import shutil
@@ -60,13 +61,13 @@ def process_model(model_path, trajectory, cut_time, xvgres_path=default_output_d
     xvg_filename = '_'.join([base_filename] + features) + '.xvg'
     xvg_filepath = os.path.join(xvgres_path, xvg_filename)
 
-    os.chdir(model_path)
     if(not os.path.isfile(xvg_filepath)):
         if(not process_mode in modes):
             print('file "' + xvg_filepath + '" was not found.\nGenerating from the trajectory "' + model_path + '_' + trajectory + '"')
         modes.append(process_mode)
 
     if(process_mode in modes):
+        os.chdir(model_path)
         input_line = ' '.join([energy_features_ids[f] for f in features] + ['0'])
         cmd = [gmx_exe, 'energy', '-f', trajectory + '.edr', '-o', xvg_filename]
         print(cmd)
@@ -75,7 +76,7 @@ def process_model(model_path, trajectory, cut_time, xvgres_path=default_output_d
         print('"' + xvg_filepath + '" saved')
 
     xvg_file = gmx.XVG()
-    xvg_file.read(xvg_filename)
+    xvg_file.read(xvg_filepath)
     N_fields = len(xvg_file.names)
     time = xvg_file.array[0]
     stab_time_ind = (time < cut_time)
@@ -131,7 +132,11 @@ maxsol = [1040, 1050, 1055, 1060, 1070]
 maxsol = []
 
 if(len(maxsol) == 0):
-    maxsol = [int(maxsol_dir[len(maxsol_prefix):]) for maxsol_dir in os.listdir(os.path.join(run_path, output_dir))]
+    dir_for_list = os.path.join(res_path, output_dir)
+    if(not os.path.isdir(dir_for_list)):
+        dir_for_list = os.path.join(run_path, output_dir)
+    #maxsol = [int(maxsol_dir[len(maxsol_prefix):]) for maxsol_dir in os.listdir(dir_for_list)]
+    maxsol = [int(re.search(r'.*' + maxsol_prefix + r'(\d+).*', maxsol_dir).group(1)) for maxsol_dir in os.listdir(dir_for_list)]
     
 model_names =  [(maxsol_prefix + str(n)) for n in maxsol]
 N_models = len(model_names)
