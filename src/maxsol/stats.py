@@ -12,7 +12,7 @@ import gromacs.formats as gmx
 # ========== paths ============
 root_path = my.git_root_path()
 run_path = os.path.join(root_path, 'run')
-exe_path = os.path.join(root_path, 'src', 'exe')
+exe_path = os.path.join(root_path, 'src', 'maxsol')
 res_path = os.path.join(root_path, 'res')
 default_output_dir = 'xvg'
 gmx_exe = 'gmx_mpi'

@@ -10,7 +10,7 @@ fi
 job_id=$1
 root_path=$(git rev-parse --show-toplevel)
 run_path=run/$job_id
-exe_path=src/exe
+exe_path=src/maxsol
 cd $root_path
 cd $run_path
 

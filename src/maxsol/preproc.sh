@@ -5,6 +5,7 @@
 
 set -e
 gmx_serial=gmx_ser_gpu
+
 gmx_mdrun=gmx_mpi
 gmx_mdrun=gmx_angara
 gmx_mdrun=$gmx_serial
@@ -43,7 +44,7 @@ fi
 job_id=$1
 root_path=$(git rev-parse --show-toplevel)
 run_path=run/$job_id
-exe_path=src/exe
+exe_path=src/maxsol
 cd $root_path
 cd $run_path
 

@@ -2,15 +2,15 @@
 
 set -e
 gmx_serial=gmx_ser_gpu
-#gmx_serial=gmx_serial
+gmx_serial=gmx_serial
 
 gmx_mdrun=gmx_angara
 gmx_mdrun="$gmx_serial"
 
 argc=$#
-if [ $argc -ne 2 ] && [ $argc -ne 3 ] && [ $argc -ne 4 ] && [ $argc -ne 5 ]
+if [ $argc -ne 2 ] && [ $argc -ne 3 ] && [ $argc -ne 4 ]
 then
-        printf "usage:\n$0   job_name   ompN   [gpu_id (-1=no_gpu)   [continue(0)   [mpiN(1)]]]\n"
+        printf "usage:\n$0   job_name   ompN   [gpu_id (-1=no_gpu)   [mpiN(1)]]\n"
         exit 1
 fi
 if [ $argc -gt 2 ]
@@ -21,37 +21,28 @@ else
 fi
 if [ $argc -gt 3 ]
 then
-        cont=$4
-else
-        cont=0
-fi
-if [ $argc -gt 4 ]
-then
-        mpiN=$5
+        mpiN=$4
 else
         mpiN=1
 fi
 job_id=$1
 root_path=$(git rev-parse --show-toplevel)
 run_path=run/$job_id
-exe_path=src/exe
+exe_path=src/maxsol
 ompN=$2
 cd $root_path
 cd $run_path
 
 # ====================================
 
-if [ $cont -eq 0 ]
-then
-        $gmx_serial grompp -f nvt.mdp -c em.gro -r em.gro -p topol.top -o nvt.tpr
-fi
+$gmx_serial grompp -f minim.mdp -c 1iee_wions.gro -p topol.top -o em.tpr
 if [ $gpu_id -eq -1 ]
 then
-        $gmx_mdrun mdrun -v -deffnm nvt -ntomp $ompN -ntmpi $mpiN -nsteps 1000000 -cpi nvt.cpt -maxh 24 -cpo nvt.cpt
+        $gmx_mdrun mdrun -v -deffnm em -ntomp $ompN -ntmpi $mpiN
 else
-        $gmx_mdrun mdrun -v -deffnm nvt -ntomp $ompN -ntmpi $mpiN -gpu_id $gpu_id -nsteps 1000000 -cpi nvt.cpt -maxh 24 -cpo nvt.cpt
+        $gmx_mdrun mdrun -v -deffnm em -ntomp $ompN -ntmpi $mpiN -gpu_id $gpu_id
 fi
-$gmx_serial trjconv -s em.tpr -f nvt.gro -pbc nojump -o nvt_nojump.gro < output_whole_sys0.in
+$gmx_serial trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
 
 #rm nvt.trr
 
