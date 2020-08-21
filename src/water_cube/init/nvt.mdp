@@ -1,14 +1,14 @@
 
 integrator               = md        
 dt                       = 0.002     ; 2 fs
-nsteps                   = 50000    ; 1.0 ns
+nsteps                   = 500000    ; 1.0 ns
 
-nstenergy                = 200
-nstlog                   = 2000
-nstxout-compressed       = 10000
+nstenergy                = 500
+nstlog                   = 500
+nstxout-compressed       = 500
 
 continuation             = yes
-constraint-algorithm     = lincs
+constraint-algorithm     = shake
 constraints              = h-bonds
 
 cutoff-scheme            = Verlet
@@ -25,8 +25,3 @@ tc-grps                  = System
 tau-t                    = 2.0
 ref-t                    = 298.15
 nhchainlength            = 1
-
-pcoupl                   = Parrinello-Rahman 
-tau_p                    = 5.0
-compressibility          = 4.46e-5
-ref_p                    = 1.0 

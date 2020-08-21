@@ -16,7 +16,7 @@ cd $root_path
 rm -rf $run_path
 mkdir -p $run_path
 cp $src_path/*.mdp $run_path
-cp $src_path/*.pdb $run_path
+#cp $src_path/*.pdb $run_path
 cp $src_path/*.in $run_path
 cp $src_path/*.top $run_path
 
