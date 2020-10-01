@@ -10,13 +10,13 @@ def run_it(cmd, shell=False):
     print(cmd)
     sp.run(cmd, shell=shell)
     
-omp_cores = 6
-gpu_id = -1
+cpu_N = multiprocessing.cpu_count()
 
-[output_dir, modes, features, stab_time], correct_input = \
+[omp_N, gpu_id], correct_input = \
     my.parse_args(args, ['-omp', '-gpu_id'], \
-                  possible_values=[range(multiprocessing.cpu_count()), None], \
-                  possible_arg_numbers=[])
+                  possible_values=[range(cpu_N), None], \
+                  possible_arg_numbers=[[0, 1], [0, 1]], \
+                  default_values=[cpu_N, -1])
 
 # =============== paths ================
 root_path = my.git_root_path()

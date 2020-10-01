@@ -1,11 +1,11 @@
 
 integrator               = md        
 dt                       = 0.002     ; 2 fs
-nsteps                   = 500000    ; 1.0 ns
+nsteps                   = 50000    ; 1.0 ns
 
 nstenergy                = 500
 nstlog                   = 500
-nstxout-compressed       = 500
+nstxout-compressed       = 25000
 
 continuation             = yes
 constraint-algorithm     = shake
