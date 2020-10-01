@@ -1,5 +1,6 @@
 *.trr
 *.xtc
+*.out
 run/*
 *__pycache__*
 *~
