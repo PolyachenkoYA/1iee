@@ -1,3 +1,2 @@
 TODO:
-- git on host-gpu on fisher
-- gmx_mpi fails on fisher
+- problem: some atoms have multiple (usually 2) images with p_i : sum{p_i}==1. Protonation python code takes the 1st one, but not the one with the highest p_i.
