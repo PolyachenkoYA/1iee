@@ -2,6 +2,7 @@
 
 set -e
 gmx_executable=gmx_angara
+#gmx_executable=gmx_mpi
 
 argc=$#
 if [ $argc -ne 2 ] && [ $argc -ne 3 ]

@@ -1,5 +1,0 @@
-./mainrun_slurm.sh: line 28: cd: run/dV_time0.25_8: No such file or directory
-./change_box_size.sh: line 24: cd: run/dV_time0.25_8: No such file or directory
-Skipping preproc
-./mainrun_slurm.sh dV_time0.25_8 1 4 0 nvt
-./change_box_size.sh dV_time0.25_8 nvt.gro nvt_bigbox.gro 1.001

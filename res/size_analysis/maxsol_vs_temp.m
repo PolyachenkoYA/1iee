@@ -7,7 +7,7 @@ jobs = {'job111', 'job112', 'job113', 'job114'};
 stab_times = [200, 400, 600, 800, 1000];
 %stab_times = [1000];
 t = [1, 10, 15, 20, 25, 30, 35, 40];
-draw_jobs = 0;
+draw_jobs = 1;
 draw_stab_times = 1;
 
 N_jobs = length(jobs);
@@ -37,7 +37,7 @@ if(draw_stab_times)
 end
 
 
-function draw_line(ax, line_name, line_id, t)
+function [fit1, fit2] = draw_line(ax, line_name, line_id, t)
     maxsol_0 = load([line_name '.txt']);
 
     fit2 = polyfit(t, maxsol_0, 2);
