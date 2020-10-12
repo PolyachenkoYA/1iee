@@ -81,9 +81,9 @@ $gmx_serial grompp -f minim.mdp -c 1iee_wions.gro -p topol.top -o em.tpr
 #srun --ntasks-per-node=1 $gmx_executable mdrun -v -deffnm em -ntomp $omp -gpu_id $gpu_id -pin on
 if [ $gpu_id -eq -1 ]
 then
-        $gmx_serial mdrun -v -deffnm em -ntomp $omp -pin on
+        $gmx_mdrun mdrun -v -deffnm em -ntomp $omp -pin on
 else
-        $gmx_serial mdrun -v -deffnm em -ntomp $omp -gpu_id $gpu_id -pin on
+        $gmx_mdrun mdrun -v -deffnm em -ntomp $omp -gpu_id $gpu_id -pin on
 fi
 $gmx_serial trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
 cp em.gro nvt.gro

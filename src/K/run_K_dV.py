@@ -16,7 +16,7 @@ dt = 2e-6    # 1 fs = 1e-6 ns
 # =============== paths ================
 root_path = my.git_root_path()
 run_path = os.path.join(root_path, 'run')
-exe_path = os.path.join(root_path, 'src', 'water_cube')
+exe_path = os.path.join(root_path, 'src', 'K')
 res_path = os.path.join(root_path, 'res')
 no_preproc = 'no'
 preproc_if_permitted = 'ask'
@@ -29,7 +29,7 @@ mdp_1_filename_base = 'nvt_bigbox'
 # ================ params =================
 
 times = [0.25, 0.5, 1.0, 2.0]
-#times = [0.1]
+times = [0.1]
 
 # ============== arg parse ====================
 N_gpus = 1
@@ -101,13 +101,24 @@ for time_i in time_ids:
         my.run_it('./clear_restore.sh ' + model_name)
         my.run_it(['python', 'change_mdp.py', '-in', mdp_filepath_0, '-out', mdp_filepath_0, '-flds', 'nsteps', str(nsteps)])
         my.run_it(['python', 'change_mdp.py', '-in', mdp_filepath_1, '-out', mdp_filepath_1, '-flds', 'nsteps', str(nsteps)])
-        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), '1', '-1', '1', '1', '2', '2118', '1iee112_prot4gmx.pdb']))
+        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), '1', str(gpu_id), '1', '1', '2', '2118', '1iee112_prot4gmx.pdb']))
     
     if(mainrun_mode == 1):
-        my.run_it(' '.join(['./mainrun_slurm.sh', model_name, '1', str(mpi_cores), str(gpu_id),  mdp_0_filename_base]))
+        #my.run_it(' '.join(['./mainrun_slurm.sh', model_name, '1', str(mpi_cores), str(gpu_id),  mdp_0_filename_base]))
+        my.run_it(' '.join(['./mainrun_serial.sh', model_name, str(omp_cores), '1', str(gpu_id),  mdp_0_filename_base]))
         my.run_it(' '.join(['./change_box_size.sh', model_name, mdp_0_filename_base + '.gro', mdp_1_filename_base + '.gro', str(dV_mult)]))
-        #./change_box_size.sh $job_id $initial_filename $new_filename 1.01)
         
     if(mainrun_mode == 2):
-        my.run_it(' '.join(['./mainrun_slurm.sh', model_name, '1', str(mpi_cores), str(gpu_id), mdp_1_filename_base]))
+        #my.run_it(' '.join(['./mainrun_slurm.sh', model_name, '1', str(mpi_cores), str(gpu_id),  mdp_1_filename_base]))
+        my.run_it(' '.join(['./mainrun_serial.sh', model_name, str(omp_cores), '1', str(gpu_id),  mdp_1_filename_base]))
         my.run_it(' '.join(['./postproc_dV.sh', model_name]))
+
+'''
+./clear_restore.sh $job_id
+#cp ../../run/save/* ../../run/$job_id/
+./preproc.sh $job_id $ompN $mpiN $gpu_id 1 1 2 2118 1iee112_prot4gmx.pdb
+./mainrun_serial.sh $job_id $ompN $mpiN $gpu_id $initial_base
+./change_box_size.sh $job_id $initial_filename $new_filename 1.001
+./mainrun_serial.sh $job_id $ompN $mpiN $gpu_id $new_base
+./postproc_dV.sh $job_id
+'''
