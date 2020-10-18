@@ -65,7 +65,6 @@ cd $run_path
 ### write the whole system (all 0-7 groups were encorporated into a single group 0 by 'combine' command above) relative to the outline (group 8)
 # write relative 0 8 1iee_cryst.pdb
 
-
 # python ../src/exe/protonate.py 1iee_cryst.pdb 1iee_prot.pdb
 ### this can be done on playmolecule/ProteinPrepare website
 
@@ -81,12 +80,13 @@ $gmx_serial grompp -f minim.mdp -c 1iee_wions.gro -p topol.top -o em.tpr
 #srun --ntasks-per-node=1 $gmx_executable mdrun -v -deffnm em -ntomp $omp -gpu_id $gpu_id -pin on
 if [ $gpu_id -eq -1 ]
 then
-        $gmx_mdrun mdrun -v -deffnm em -ntomp $omp -pin on
+        $gmx_mdrun mdrun -v -deffnm em -ntomp $omp
 else
-        $gmx_mdrun mdrun -v -deffnm em -ntomp $omp -gpu_id $gpu_id -pin on
+        $gmx_mdrun mdrun -v -deffnm em -ntomp $omp -gpu_id $gpu_id
 fi
 $gmx_serial trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
 cp em.gro nvt.gro
+cp em.gro npt.gro
 
 cd $root_path
 cd $exe_path

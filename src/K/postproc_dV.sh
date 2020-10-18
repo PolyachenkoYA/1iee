@@ -27,8 +27,8 @@ cd $run_path
 $gmx_serial energy -f nvt.edr -o nvt.xvg < nvt.in > $nvt_summary_filename
 $gmx_serial energy -f nvt_bigbox.edr -o nvt_bigbox.xvg < nvt.in > $nvt_bigbox_summary_filename
 
-python $root_path/$exe_path/extract_nvt.py $nvt_summary_filename nvt_pressure.dat
-python $root_path/$exe_path/extract_nvt.py $nvt_bigbox_summary_filename nvt_bigbox_pressure.dat
+#python $root_path/$exe_path/extract_nvt.py $nvt_summary_filename nvt_pressure.dat
+#python $root_path/$exe_path/extract_nvt.py $nvt_bigbox_summary_filename nvt_bigbox_pressure.dat
 
 cd $root_path
 cd $exe_path

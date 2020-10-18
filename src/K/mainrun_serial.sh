@@ -30,9 +30,9 @@ cd $run_path
 $gmx_serial grompp -f $name.mdp -c $name.gro -p topol.top -o $name.tpr
 if [ $gpu_id -eq -1 ]
 then
-	$gmx_mdrun mdrun -deffnm $name -ntomp $ompN -dlb no -pin on -cpi $name.cpt -cpo $name.cpt -maxh 24
+	$gmx_mdrun mdrun -deffnm $name -ntomp $ompN -dlb no -cpi $name.cpt -cpo $name.cpt # -maxh 24
 else
-	$gmx_mdrun mdrun -deffnm $name -ntomp $ompN -dlb no -pin on -cpi $name.cpt -cpo $name.cpt -maxh 24 -nb gpu -gpu_id $gpu_id
+	$gmx_mdrun mdrun -deffnm $name -ntomp $ompN -dlb no -cpi $name.cpt -cpo $name.cpt -nb gpu -gpu_id $gpu_id # -maxh 24 
 fi
 #sbatch -J gromacs -p max1n -N 1 --reservation=test --ntasks-per-node=$mpiN --gres=gpu:1 --wrap="$cmd"
 

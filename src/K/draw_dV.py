@@ -11,8 +11,8 @@ import gromacs.formats as gmx
 
 # =============== paths ================
 root_path = my.git_root_path()
-run_path = os.path.join(root_path, 'run')
-exe_path = os.path.join(root_path, 'src', 'water_cube')
+run_path = os.path.join(root_path, 'run', 'save')
+exe_path = os.path.join(root_path, 'src', 'K')
 res_path = os.path.join(root_path, 'res')
 nvt0_filename = 'nvt'
 nvt1_filename = 'nvt_bigbox'
@@ -39,6 +39,9 @@ def load_xvg(filepath, failsafe=True):
     return xvg_file
     
 def proc_half(filepath, cut_time):
+    cptsave_filepath = filepath + '_prev.cpt'
+    if(not os.path.isfile(cptsave_filepath)):
+        print('WARNING\nNo "' + cptsave_filepath + '" found. Computation was probably corrupted.')
     xvg_filepath = filepath + '.xvg'
     xvg_file = load_xvg(xvg_filepath)  # timestep, T, P
     N_fields = len(xvg_file.names)
@@ -57,61 +60,87 @@ def proc_half(filepath, cut_time):
     
     return P_mean, P_std, d_P, V
 
-def proc_model(time, id, cut_time_0=0, cut_time_1=0):
-    model_name = 'dV_time' + str(time) + '_' + str(id)
+def proc_model(temp, id, cut_time_0=1000, cut_time_1=1000):
+    model_name = 'dV_temp' + str(temp) + '_' + str(id)
     model_path = os.path.join(run_path, model_name)
     
-    #print(time, id)
+    #print(temp, id)
     # stab time is ~20-30
-    P0, P0_std, d_P0, V0 = proc_half(os.path.join(model_path, nvt0_filename), 100)
-    P1, P1_std, d_P1, V1 = proc_half(os.path.join(model_path, nvt1_filename), 100)
+    P0, P0_std, d_P0, V0 = proc_half(os.path.join(model_path, nvt0_filename), cut_time_0)
+    P1, P1_std, d_P1, V1 = proc_half(os.path.join(model_path, nvt1_filename), cut_time_1)
     
-    dV_rel = 1 / (V1 / V0 - 1)  # V1 > V0
-    K = (P0 - P1) * dV_rel
+    dV_rel = (V1 - V0) / (V1 + V0) * 2  # V1 > V0
+    K = - (P1 - P0) * dV_rel
     d_K = np.sqrt(d_P1**2 + d_P0**2) * dV_rel
     
     return K * 1e5, d_K * 1e5  # atm -> Pa
     
-    
+
+# ================ params =================
 T_C2K = 273.15
 dt = 2e-6    # 1 fs = 1e-6 ns
 
-# ================ params =================
+temps = [0.1, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0, 55.0]
+#temps = [0.1, 15.0, 30.0, 45.0]
+temps = [5.0, 10.0, 20.0, 25.0, 35.0, 40.0, 50.0, 55.0]
 
-times = [0.25, 0.5, 1.0, 2.0]
-ids = [[0, 1, 2, 3],
-       [0, 1, 2, 3],
-       [0, 1, 2, 3],
-       [0, 1, 2]]
+ids =  [[0, 1, 2, 3],
+        [0, 4],
+        [0, 4],
+        [0, 1, 2, 3],
+        [0, 4],
+        [0, 4],
+        [0, 1, 2, 3],
+        [0, 4],
+        [0, 4],
+        [0, 1, 2, 3],
+        [0, 4],
+        [0, 4]]
 
-#times = [0.25, 0.5, 1.0]
-#ids = [0, 1, 2, 3]
+ids =  [range(8)]*8
+
+#ids =  [[0, 1, 2, 3],
+#        [0, 1, 2, 3],
+#        [0, 1, 2, 3],
+#        [0, 1, 2, 3]]
 
 # ============== arg parse ====================
 N = len(ids)
-N_t = len(times)
-K_arr = np.zeros((N_t, N))
-d_K_arr = np.zeros((N_t, N))
+N_t = len(temps)
+K_arr = [[]] * N_t
+d_K_arr = [[]] * N_t
 K = np.zeros(N_t)
 K_std = np.zeros(N_t)
 d_K = np.zeros(N_t)
-for t_i, time in enumerate(times):
+for t_i, temp in enumerate(temps):
+    K_arr[t_i] = np.zeros(len(ids[t_i]))
+    d_K_arr[t_i] = np.zeros(len(ids[t_i]))
     for i, id in enumerate(ids[t_i]):
-        K_arr[t_i, i], d_K_arr[t_i, i] = proc_model(time, id)
+        K_arr[t_i][i], d_K_arr[t_i][i] = proc_model(temp, id)
         #print(K_arr[t_i, i], end=' ')
         #sp.run(['cp', K_filepath, './K_' + suff + '.dat'])
         #print()
-#    print(time)
-    K[t_i] = np.mean(K_arr[t_i, :])
-    K_std[t_i] = np.std(K_arr[t_i, :])
-    d_K[t_i] = K_std[t_i] / np.sqrt(len(K_arr[t_i, :]))
+
+#    print(temp)
+#    print(K_arr[t_i][i], d_K_arr[t_i][i])
+    K[t_i] = np.mean(K_arr[t_i])
+    K_std[t_i] = np.std(K_arr[t_i])
+    d_K[t_i] = K_std[t_i] / np.sqrt(len(K_arr[t_i]))
 
 print(K)
 print(d_K / K)
 print(K_std / K)
 
-#fig, ax = my.get_fig('traj length (ns)', 'K', title='K(t)')
-#ax.plot(times, K_arr)
-#ax.errorbar(times, K, yerr=d_K)
+fig, ax = my.get_fig('T (C)', 'K (Pa)', title='K(T)')
+#ax.errorbar(temps, K, yerr=d_K, label='averaged', fmt='o', mfc='none')
 
-#plt.show()
+K_buf = np.zeros(N_t)
+d_K_buf = np.zeros(N_t)
+for i in range(8):
+    for t_i in range(N_t):
+        K_buf[t_i] = K_arr[t_i][i]
+        d_K_buf[t_i] = d_K_arr[t_i][i]
+    ax.errorbar(temps, K_buf, yerr=d_K_buf, label=str(i), fmt='o', mfc='none')
+
+ax.legend()
+plt.show()

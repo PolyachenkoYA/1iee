@@ -9,42 +9,40 @@ import mylib as my
 def run_it(cmd, shell=False):
     print(cmd)
     sp.run(cmd, shell=shell)
-    
-T_C2K = 273.15
-dt = 2e-6    # 1 fs = 1e-6 ns
 
 # =============== paths ================
 root_path = my.git_root_path()
 run_path = os.path.join(root_path, 'run')
-exe_path = os.path.join(root_path, 'src', 'water_cube')
+exe_path = os.path.join(root_path, 'src', 'K')
 res_path = os.path.join(root_path, 'res')
 main_mdp_filename_base = 'npt'
 no_preproc = 'no'
 preproc_if_permitted = 'ask'
+preproc_if_needed = 'if_needed'
 preproc_force = 'force'
 
 # ================ params =================
 
-times = [0.2, 0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5]
-times = [0.2500, 0.3053, 0.3727, 0.4551, 0.5558, 0.6786, 0.8286, 1.012, 1.235, 1.5085, 1.842, 2.249, 2.746, 3.3535, 4.095, 5.000]
-times = [0.25, 0.5, 1.0, 2.0]
+N_gpus = 4
+T_C2K = 273.15
+dt = 2e-6    # 1 fs = 1e-6 ns
+equil_maxsol_poly = [-2.9516, 1117.2]   # maxsol = np.polyval(equil_maxsol_poly, T), [T] = C (not K)
+temps = np.array([0.1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
+P_taus = np.array([50, 100, 200, 400, 800, 1600, 3200, 6400])
+comprs = np.array([2e-4, 3e-4, 4e-4])
+times = np.array([5.0, 10.0])
 
 # ============== arg parse ====================
-N_gpus = 1
 N_omp_max = multiprocessing.cpu_count()
 possible_gpu_ids = [str(i) for i in range(N_gpus)] + ['-1']
 possible_omps = [str(i) for i in range(1, N_omp_max + 1)]
-possible_time_ids = [str(i) for i in range(len(times))] + ['all']
-possible_timeids_numbers = range(1, len(times) + 1)
-possible_preproc = [no_preproc, preproc_if_permitted, preproc_force]
-[omp_cores, mpi_cores, gpu_id, do_mainrun, preproc_mode, time_ids, model_id], _ = \
-    my.parse_args(sys.argv[1:], ['-omp', '-mpi', '-gpu_id', '-do_mainrun', '-preproc_mode', '-time_ids', '-id'], \
-                  possible_values=[possible_omps, None, possible_gpu_ids, ['no', 'yes'], possible_preproc, possible_time_ids, None], \
-                  possible_arg_numbers=[[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], possible_timeids_numbers, [1]], \
-                  default_values=[[str(N_omp_max)], ['1'], ['0'], ['yes'], [preproc_if_permitted], ['all'], None])
-if(time_ids[0] == 'all'):
-    time_ids = [str(i) for i in range(1, len(times) + 1)]
-time_ids = [int(i) for i in time_ids]
+possible_preproc = [no_preproc, preproc_if_permitted, preproc_force, preproc_if_needed]
+[omp_cores, mpi_cores, gpu_id, do_mainrun, preproc_mode, param_ids, model_id], _ = \
+    my.parse_args(sys.argv[1:], ['-omp', '-mpi', '-gpu_id', '-do_mainrun', '-preproc_mode', '-param_ids', '-id'], \
+                  possible_values=[possible_omps, None, possible_gpu_ids, ['no', 'yes'], possible_preproc, None, None], \
+                  possible_arg_numbers=[[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [2], [1]], \
+                  default_values=[[str(N_omp_max)], ['1'], ['0'], ['yes'], [preproc_if_needed], None, None])
+param_ids = [int(i) for i in param_ids]
 omp_cores = int(omp_cores[0])
 mpi_cores = int(mpi_cores[0])
 gpu_id = int(gpu_id[0])
@@ -53,29 +51,45 @@ preproc_mode = preproc_mode[0]
 # ===================== cycle ===================
 # flucts K
 
-for time_i in time_ids:
-    time = times[time_i]
-    nsteps = np.intc(time / dt)
-    model_name = os.path.join('time' + my.f2str(time) + '_' + model_id)
-    mdp_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.mdp')
-    checkpoint_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.cpt')
-    continue_comp = do_mainrun and os.path.isfile(checkpoint_filepath)
+temp = temps[param_ids[0]]
+P_tau = P_taus[param_ids[1]]
+for time_i, time in enumerate(times):
+    for compr_i, compr in enumerate(comprs):
+        maxsol = int(round(np.polyval(equil_maxsol_poly, temp) * 2))
+        nsteps = int(round(time / dt))
     
-    if(preproc_mode in [preproc_if_permitted, preproc_force]):
-        if(os.path.isfile(checkpoint_filepath)):
-            print('WARNING:\npreproc_mode is ' + preproc_mode + ', but the checkpoint file "' + checkpoint_filepath + '" was found.\nRunning the model from the initial .pdb.')
-            if(preproc_mode == preproc_if_permitted):
-                skip = (input('Proceed? (y/N)') != 'y')
-            elif(preproc_mode == preproc_force):
+        model_name = os.path.join('flucts_Ptau' + my.f2str(P_tau) + '_compr' + my.f2str(compr) + '_time' + my.f2str(time) + '_' + model_id)
+        mdp_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.mdp')
+        checkpoint_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.cpt')
+        continue_comp = do_mainrun and os.path.isfile(checkpoint_filepath)
+        
+        if(preproc_mode in [preproc_if_permitted, preproc_force, preproc_if_needed]):
+            if(os.path.isfile(checkpoint_filepath)):
+                print('WARNING:\npreproc_mode is ' + preproc_mode + ', but the checkpoint file "' + checkpoint_filepath + '" was found.\nRunning the model from the initial .pdb.')
+                if(preproc_mode == preproc_if_permitted):
+                    skip = (input('Proceed? (y/N)') != 'y')
+                    print(1)
+                elif(preproc_mode == preproc_force):
+                    skip = False
+                    print(2)
+                elif(preproc_mode == preproc_if_needed):
+                    skip = True
+                    print(3)
+            else:
                 skip = False
-                
-            if(skip):
-                print('Skipping')
-                continue
-        my.run_it('./clear_restore.sh ' + model_name)
-        my.run_it(['python', 'change_mdp.py', '-in', mdp_filepath, '-out', mdp_filepath, '-flds', 'nsteps', str(nsteps)])
-        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), '1']))
     
-    if(do_mainrun):
-        my.run_it(' '.join(['./mainrun_slurm.sh', model_name, '1', str(mpi_cores), str(gpu_id)]))
-        my.run_it(' '.join(['./postproc.sh', model_name]))
+        else:    # no_preproc
+            skip = True 
+                        
+        if(skip):
+            print('Skipping')
+        else:
+            my.run_it('./clear_restore.sh ' + model_name)
+            #my.run_it(['python', 'change_mdp.py', '-in', mdp_filepath, '-out', mdp_filepath, '-flds', 'ref-t', str(temp + T_C2K)])
+            my.run_it(['python', 'change_mdp.py', '-in', mdp_filepath, '-out', mdp_filepath, '-flds', 'ref-t', str(temp + T_C2K), 'nsteps', str(nsteps), 'tau_p', str(P_tau), 'compressibility', str(compr), 'tau-t', str(P_tau / 2)])
+            my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), '1', str(gpu_id), '1', '1', '2', str(maxsol), '1iee112_prot4gmx.pdb']))
+            
+        if(do_mainrun):
+            #my.run_it(' '.join(['./mainrun_slurm.sh', model_name, '1', str(mpi_cores), str(gpu_id), main_mdp_filename_base]))
+            my.run_it(' '.join(['./mainrun_serial.sh', model_name, str(omp_cores), '1', str(gpu_id), main_mdp_filename_base]))
+            my.run_it(' '.join(['./postproc_flucts.sh', model_name]))
