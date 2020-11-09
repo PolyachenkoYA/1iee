@@ -16,6 +16,7 @@ run_path = os.path.join(root_path, 'run')
 exe_path = os.path.join(root_path, 'src', 'K')
 res_path = os.path.join(root_path, 'res')
 main_mdp_filename_base = 'npt'
+eql_mdp_filename_base = 'eql'
 no_preproc = 'no'
 preproc_if_permitted = 'ask'
 preproc_if_needed = 'if_needed'
@@ -28,9 +29,10 @@ T_C2K = 273.15
 dt = 2e-6    # 1 fs = 1e-6 ns
 equil_maxsol_poly = [-2.9516, 1117.2]   # maxsol = np.polyval(equil_maxsol_poly, T), [T] = C (not K)
 temps = np.array([0.1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
-P_taus = np.array([50, 100, 200, 400, 800, 1600, 3200, 6400])
+P_taus = np.array([200, 400, 800, 1600, 3200, 6400, 12800, 25000, 50000, 100000, 200000, 400000, 800000, 1600000, 3200000, 6400000])
+P_taus = np.array([4, 8, 16, 32, 64, 128, 256, 512])
 comprs = np.array([2e-4, 3e-4, 4e-4])
-times = np.array([5.0, 10.0])
+times = np.array([20.0, 40.0])
 
 # ============== arg parse ====================
 N_omp_max = multiprocessing.cpu_count()
@@ -40,7 +42,7 @@ possible_preproc = [no_preproc, preproc_if_permitted, preproc_force, preproc_if_
 [omp_cores, mpi_cores, gpu_id, do_mainrun, preproc_mode, param_ids, model_id], _ = \
     my.parse_args(sys.argv[1:], ['-omp', '-mpi', '-gpu_id', '-do_mainrun', '-preproc_mode', '-param_ids', '-id'], \
                   possible_values=[possible_omps, None, possible_gpu_ids, ['no', 'yes'], possible_preproc, None, None], \
-                  possible_arg_numbers=[[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [2], [1]], \
+                  possible_arg_numbers=[[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [4, 5], [1]], \
                   default_values=[[str(N_omp_max)], ['1'], ['0'], ['yes'], [preproc_if_needed], None, None])
 param_ids = [int(i) for i in param_ids]
 omp_cores = int(omp_cores[0])
@@ -52,14 +54,15 @@ preproc_mode = preproc_mode[0]
 # flucts K
 
 temp = temps[param_ids[0]]
-P_tau = P_taus[param_ids[1]]
-for time_i, time in enumerate(times):
-    for compr_i, compr in enumerate(comprs):
+compr = comprs[param_ids[1]]
+time = times[param_ids[2]]
+for Ptau_i, P_tau in enumerate(P_taus[param_ids[3:]]):
         maxsol = int(round(np.polyval(equil_maxsol_poly, temp) * 2))
         nsteps = int(round(time / dt))
     
         model_name = os.path.join('flucts_Ptau' + my.f2str(P_tau) + '_compr' + my.f2str(compr) + '_time' + my.f2str(time) + '_' + model_id)
         mdp_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.mdp')
+        eql_filepath = os.path.join(run_path, model_name, eql_mdp_filename_base + '.mdp')
         checkpoint_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.cpt')
         continue_comp = do_mainrun and os.path.isfile(checkpoint_filepath)
         
@@ -86,7 +89,23 @@ for time_i, time in enumerate(times):
         else:
             my.run_it('./clear_restore.sh ' + model_name)
             #my.run_it(['python', 'change_mdp.py', '-in', mdp_filepath, '-out', mdp_filepath, '-flds', 'ref-t', str(temp + T_C2K)])
-            my.run_it(['python', 'change_mdp.py', '-in', mdp_filepath, '-out', mdp_filepath, '-flds', 'ref-t', str(temp + T_C2K), 'nsteps', str(nsteps), 'tau_p', str(P_tau), 'compressibility', str(compr), 'tau-t', str(P_tau / 2)])
+#            my.run_it(['python', 'change_mdp.py', '-in', mdp_filepath, '-out', mdp_filepath, '-flds', 'ref-t', str(temp + T_C2K), \
+#                                                                                                      'nsteps', str(nsteps), \
+#                                                                                                      'tau_p', str(P_tau), \
+#                                                                                                      'compressibility', str(compr), \
+#                                                                                                      'tau-t', str(P_tau / 4)])
+#            my.run_it(['python', 'change_mdp.py', '-in', eql_filepath, '-out', eql_filepath, '-flds', 'ref-t', str(temp + T_C2K), \
+#                                                                                                      'gen-temp', str(temp + T_C2K), \
+#                                                                                                      'gen-seed', str(model_id), \
+#                                                                                                      'tau-t', str(P_tau / 4)])
+            my.run_it(['python', 'change_mdp.py', '-in', mdp_filepath, '-out', mdp_filepath, '-flds', 'ref-t', str(temp + T_C2K), \
+                                                                                                      'nsteps', str(nsteps), \
+                                                                                                      'tau_p', str(P_tau), \
+                                                                                                      'gen-temp', str(temp + T_C2K), \
+                                                                                                      'gen-seed', str(model_id), \
+                                                                                                      'compressibility', str(compr), \
+                                                                                                      'tau-t', str(P_tau / 4)])
+
             my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), '1', str(gpu_id), '1', '1', '2', str(maxsol), '1iee112_prot4gmx.pdb']))
             
         if(do_mainrun):

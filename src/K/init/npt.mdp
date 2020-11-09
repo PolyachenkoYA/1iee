@@ -3,13 +3,17 @@ integrator               = md ;
 dt                       = 0.002     ; 2 fs
 nsteps                   = 10000000    ; 10.0 ns
 
-nstenergy                = 500 ;
-nstlog                   = 500 ;
+nstenergy                = 2500 ;
+nstlog                   = 2500 ;
 nstxout-compressed       = 250000 ;
 
-continuation             = yes ;
+;continuation             = yes ;
 constraint-algorithm     = shake ;
 constraints              = h-bonds ;
+
+gen-vel                  = yes ;
+gen-temp                 = 298.15 ;
+gen-seed                 = 0 ;
 
 cutoff-scheme            = Verlet ;
 

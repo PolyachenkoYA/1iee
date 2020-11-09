@@ -1,4 +1,0 @@
-barostat convergence:
-	Ptau: [20, 50, 150, 450]
-	trj_len: [5, 10, 20] ns
-	compressibility: [1e-9, 3e-9, 1e-8]

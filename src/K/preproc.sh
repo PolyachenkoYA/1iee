@@ -85,8 +85,17 @@ else
         $gmx_mdrun mdrun -v -deffnm em -ntomp $omp -gpu_id $gpu_id
 fi
 $gmx_serial trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
-cp em.gro nvt.gro
-cp em.gro npt.gro
+cp em.gro eql.gro
+
+#$gmx_serial grompp -f eql.mdp -c eql.gro -p topol.top -o eql.tpr
+#if [ $gpu_id -eq -1 ]
+#then
+#        $gmx_mdrun mdrun -v -deffnm eql -ntomp $omp
+#else
+#        $gmx_mdrun mdrun -v -deffnm eql -ntomp $omp -gpu_id $gpu_id
+#fi
+cp eql.gro npt.gro
+cp eql.gro nvt.gro
 
 cd $root_path
 cd $exe_path

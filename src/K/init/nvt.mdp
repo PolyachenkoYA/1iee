@@ -1,15 +1,19 @@
 
-integrator               = md        
+integrator               = md ;
 dt                       = 0.002     ; 2 fs
 nsteps                   = 1000000    ; 2.0 ns
 
-nstenergy                = 500 ;
-nstlog                   = 500 ;
+nstenergy                = 2500 ;
+nstlog                   = 2500 ;
 nstxout-compressed       = 25000 ;
 
-continuation             = yes ;
+;continuation             = yes ;
 constraint-algorithm     = shake ;
 constraints              = h-bonds ;
+
+gen-vel                  = yes ;
+gen-temp                 = 293.15 ;
+gen-seed                 = 0 ;
 
 cutoff-scheme            = Verlet ;
 
@@ -22,6 +26,6 @@ DispCorr                 = EnerPres ;
 
 tcoupl                   = Nose-Hoover ;
 tc-grps                  = System ;
-tau-t                    = 2.0 ;
+tau-t                    = 25.0 ;
 ref-t                    = 293.15 ;
 nhchainlength            = 1 ;

@@ -3,8 +3,8 @@ integrator               = md ;
 dt                       = 0.002     ; 2 fs
 nsteps                   = 1000000    ; 1.0 ns
 
-nstenergy                = 500 ;
-nstlog                   = 500 ;
+nstenergy                = 2500 ;
+nstlog                   = 2500 ;
 nstxout-compressed       = 25000 ;
 
 continuation             = yes ;
@@ -22,6 +22,6 @@ DispCorr                 = EnerPres ;
 
 tcoupl                   = Nose-Hoover ;
 tc-grps                  = System ;
-tau-t                    = 2.0 ;
+tau-t                    = 25.0 ;
 ref-t                    = 298.15 ;
 nhchainlength            = 1 ;
