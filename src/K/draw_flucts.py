@@ -17,6 +17,8 @@ run_path = os.path.join(root_path, 'run')
 exe_path = os.path.join(root_path, 'src', 'K')
 res_path = os.path.join(root_path, 'res')
 npt_filename = 'npt'
+nvt0_filename = 'nvt'
+nvt1_filename = 'nvt_bigbox'
 
 def run_it(cmd, shell=False):
     print(cmd)
@@ -38,6 +40,64 @@ def load_xvg(filepath, failsafe=True):
     xvg_file = gmx.XVG()
     xvg_file.read(filepath)
     return xvg_file
+
+def proc_dV_half(filepath, cut_time, to_draw=False, title=None):
+    cptsave_filepath = filepath + '_prev.cpt'
+    if(not os.path.isfile(cptsave_filepath)):
+        print('WARNING\nNo "' + cptsave_filepath + '" found. Computation was probably corrupted.')
+    xvg_filepath = filepath + '.xvg'
+    xvg_file = load_xvg(xvg_filepath)  # timestep, T, P
+    N_fields = len(xvg_file.names)
+    time = xvg_file.array[0] * 1e-3
+    stab_time_ind = (time > cut_time)
+    time_cut = time[stab_time_ind]
+    P = xvg_file.array[2][:]
+    Pcut = P[stab_time_ind]
+    N_cut = len(Pcut)
+    Pcut_mean = np.mean(Pcut)
+    Pcut_std = np.std(Pcut)
+    d_Pcut = Pcut_std / np.sqrt(N_cut)
+
+    if(to_draw):
+        if(title is None):
+            title = filepath + ' | P(t)'
+        fig, ax = my.get_fig('time (ns)', 'P (atm)', title=title)
+        
+        ax.plot(time, P, label='data')
+        ax.plot([cut_time] * 2, [min(P), max(P)], label='$t_{stab} = ' + str(cut_time) + '$')
+        ax.legend()
+    
+    gro_filepath = filepath + '.gro'
+    box_sizes_line = read_last_line(gro_filepath)
+    sizes = np.float_(box_sizes_line.split())
+    V = np.prod(sizes)
+    
+    return Pcut_mean, Pcut_std, d_Pcut, V
+
+#def proc_model(Ttau, dV, cut_time_0=5, cut_time_1=5, to_draw=False):
+def proc_dV_model(temp, model_id=0, cut_time_0=5, cut_time_1=5, to_draw=False):
+    #model_name = 'dV_Ttau' + my.f2str(Ttau) + '_dVmult' + my.f2str(dV)
+    model_name = 'dV_temp' + my.f2str(temp)
+    model_path = os.path.join(run_path, model_name)
+    
+    #print(temp, id)
+    # stab time is ~20-30
+    P0, P0_std, d_P0, V0 = \
+        proc_dV_half(os.path.join(model_path, nvt0_filename), \
+                  cut_time_0, to_draw=to_draw, \
+                  title=model_name + '/initial_box')
+
+    P1, P1_std, d_P1, V1 = \
+        proc_dV_half(os.path.join(model_path, nvt1_filename), \
+                  cut_time_1, to_draw=to_draw, \
+                  title=model_name + '/big_box')
+    
+    dV_rel = (V1 - V0) / (V1 + V0) * 2  # V1 > V0
+    K = - (P1 - P0) / dV_rel
+    d_K = np.sqrt(d_P1**2 + d_P0**2) / dV_rel
+    
+    return K * 1e5, d_K * 1e5  # atm -> Pa
+
 
 def proc_series(data, cut_time, time, xlbl='time (ns)', ylbl='', yk=1, title='', to_draw=False):
     tk = 1e3  # ps -> ns
@@ -63,8 +123,10 @@ def proc_series(data, cut_time, time, xlbl='time (ns)', ylbl='', yk=1, title='',
 
     return filt_data * yk, avrg * yk, std * yk, dlt * yk, N
 
-def proc_model(P_tau, compr, time, model_id=0, temp=35.0, cut_time=1000, draw_T=False, draw_P=False, draw_V=False, draw_rho=False):
-    model_name = 'flucts_Ptau' + my.f2str(P_tau) + '_compr' + my.f2str(compr) + '_time' + my.f2str(time) + '_' + str(model_id)
+#def proc_fluct_model(P_tau, compr, time, model_id=0, temp=35.0, cut_time=5, draw_T=False, draw_P=False, draw_V=False, draw_rho=False):
+def proc_fluct_model(temp, model_id=0, cut_time=5, draw_T=False, draw_P=False, draw_V=False, draw_rho=False, gromacs_provided=False):
+    #model_name = 'flucts_Ptau' + my.f2str(P_tau) + '_compr' + my.f2str(compr) + '_time' + my.f2str(time) + '_' + str(model_id)
+    model_name = 'flucts_temp' + my.f2str(temp) + '_' + str(model_id)
     model_path = os.path.join(run_path, model_name)
     filepath = os.path.join(model_path, npt_filename)
     cptsave_filepath = filepath + '_prev.cpt'
@@ -75,15 +137,17 @@ def proc_model(P_tau, compr, time, model_id=0, temp=35.0, cut_time=1000, draw_T=
     if(xvg_file is None):
         return None, None, None
     N_fields = len(xvg_file.names)
-    time = xvg_file.array[0]
+    time = xvg_file.array[0] * 1e-3
     stab_time_ind = (time < cut_time)
 
-    title=r'$\tau_P = ' + str(P_tau) + r'$, $\kappa_T = ' + str(compr) + r'$, Temp = ' + str(temp)
-    draw_Ptau = 512
-    T_cut, T_mean, T_std, d_T, N_cut = proc_series(xvg_file.array[1], cut_time, time, ylbl='T (K)', title=title, to_draw=(draw_T and P_tau == draw_Ptau and compr==3e-4))
-    P_cut, P_mean, P_std, d_P, _ = proc_series(xvg_file.array[2] * 1e5, cut_time, time, yk=1e5, ylbl='P (atm)', title=title, to_draw=(draw_P and P_tau == draw_Ptau and compr==3e-4))
-    V_cut, V_mean, V_std, d_V, _ = proc_series(xvg_file.array[3] * 1e-27, cut_time, time, yk=1e-27, ylbl=r'V ($nm^3$)', title=title, to_draw=(draw_V and P_tau == draw_Ptau and compr==3e-4))
-    rho_cut, rho_mean, rho_std, d_rho, _ = proc_series(xvg_file.array[4], cut_time, time, yk=1000, ylbl=r'$\rho (g/cm^3)$', title=title, to_draw=(draw_rho and P_tau == draw_Ptau and compr==3e-4))
+    #title=r'$\tau_P = ' + str(P_tau) + r'$, $\kappa_T = ' + str(compr) + r'$, 
+    title = 'Temp = ' + my.f2str(temp)
+    Ptau_to_draw = 512
+    compr_to_draw = 3e-4
+    T_cut, T_mean, T_std, d_T, N_cut = proc_series(xvg_file.array[1], cut_time, time, ylbl='T (K)', title=title, to_draw=(draw_T))
+    P_cut, P_mean, P_std, d_P, _ = proc_series(xvg_file.array[2] * 1e5, cut_time, time, yk=1e5, ylbl='P (atm)', title=title, to_draw=(draw_P))
+    V_cut, V_mean, V_std, d_V, _ = proc_series(xvg_file.array[3] * 1e-27, cut_time, time, yk=1e-27, ylbl=r'V ($nm^3$)', title=title, to_draw=(draw_V))
+    rho_cut, rho_mean, rho_std, d_rho, _ = proc_series(xvg_file.array[4], cut_time, time, yk=1000, ylbl=r'$\rho (g/cm^3)$', title=title, to_draw=(draw_rho))
     
     gro_filepath = filepath + '.gro'
     box_sizes_line = read_last_line(gro_filepath)
@@ -116,7 +180,7 @@ def proc_model(P_tau, compr, time, model_id=0, temp=35.0, cut_time=1000, draw_T=
 
     return K, d_K, K0 # atm -> Pa
     
-# ================ params =================
+# ================ general params =================
 T_C2K = 273.15
 dt = 2e-6    # 1 fs = 1e-6 ns
 equil_maxsol_poly = [-2.9516, 1117.2]   # maxsol = np.polyval(equil_maxsol_poly, T), [T] = C (not K)
@@ -127,8 +191,49 @@ P_taus = np.array([4, 8, 16, 32, 64, 128, 256, 512])
 comprs = np.array([2e-4, 3e-4, 4e-4])
 comprs = np.array([3e-4])
 times = np.array([20.0, 40.0])
-stab_time = 10000
+stab_time = 5
 
+# ================ K(T) ===================
+draw_all = False
+draw_T = False or draw_all
+draw_P = False or draw_all
+draw_V = False or draw_all
+draw_rho = False or draw_all
+
+use_gmx_K = True
+N_temps = len(temps)
+fl_K = np.empty(N_temps)
+fl_d_K = np.empty(N_temps)
+fl_K_gmx = np.empty(N_temps)
+dV_K = np.empty(N_temps)
+dV_d_K = np.empty(N_temps)
+
+for temp_i, temp in enumerate(temps):
+    dV_K[temp_i], dV_d_K[temp_i] = \
+        proc_dV_model(temp, model_id=0, cut_time_0=stab_time, cut_time_1=stab_time, to_draw=draw_all)
+
+    fl_K[temp_i], fl_d_K[temp_i], fl_K_gmx[temp_i] = \
+        proc_fluct_model(temp, model_id=0, cut_time=stab_time, gromacs_provided=use_gmx_K, \
+                  draw_T=draw_T, draw_P=draw_P, draw_V=draw_V, draw_rho=draw_rho)
+
+print('flucts:')
+print(fl_K_gmx)
+print(fl_K)
+print(fl_d_K / fl_K)
+print('\ndV:')
+print(dV_K)
+print(dV_K / dV_d_K)
+
+fig, ax = my.get_fig('T (C)', 'K (GPa)', title='K(T)')
+ax.errorbar(temps, fl_K * 1e-9, yerr=fl_d_K * 1e-9, label='flucts', fmt='o', mfc='none')
+ax.errorbar(temps, dV_K * 1e-9, yerr=dV_d_K * 1e-9, label=r'$dV/V \sim 1e-2$', fmt='o', mfc='none')
+ax.legend()
+
+plt.show()
+
+
+'''
+# ================ compr & tau_P search ==============
 filt_peaks = True
 gromacs_provided = True
 draw_all = True
@@ -137,15 +242,11 @@ draw_P = False or draw_all
 draw_V = False or draw_all
 draw_rho = False or draw_all
 
-# ============== arg parse ====================
 N_temps = len(temps)
 N_times = len(times)
 N_comprs = len(comprs)
 N_Ptaus = len(P_taus)
 N_temps = 1
-K_data = np.empty((N_times, N_comprs, N_Ptaus))
-d_K_data = np.empty((N_times, N_comprs, N_Ptaus))
-K0_data = np.empty((N_times, N_comprs, N_Ptaus))
 for time_i, time in enumerate(times):
     for Ptau_i, P_tau in enumerate(P_taus):
         for compr_i, compr in enumerate(comprs):
@@ -188,3 +289,4 @@ for time_i, time in enumerate(times):
                 ax.legend()
 
 plt.show()
+'''

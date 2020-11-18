@@ -71,8 +71,10 @@ def proc_half(filepath, cut_time, to_draw=False, title=None):
     
     return Pcut_mean, Pcut_std, d_Pcut, V
 
-def proc_model(Ttau, dV, cut_time_0=5, cut_time_1=5, to_draw=False):
-    model_name = 'dV_Ttau' + my.f2str(Ttau) + '_dVmult' + my.f2str(dV)
+#def proc_model(Ttau, dV, cut_time_0=5, cut_time_1=5, to_draw=False):
+def proc_model(temp, id, cut_time_0=5, cut_time_1=5, to_draw=False):
+    #model_name = 'dV_Ttau' + my.f2str(Ttau) + '_dVmult' + my.f2str(dV)
+    model_name = 'dV_temp' + my.f2str(temp)
     model_path = os.path.join(run_path, model_name)
     
     #print(temp, id)
@@ -111,11 +113,12 @@ plt.show()
 '''
 
 # =============================== K(tau_T, dV) ========================
+'''
 dVs = np.array([2.5, 3, 3.5, 4])
 #dVs = [3]
-Ttaus = np.array([16, 32, 64, 128])
-tau_to_draw = (np.array([0, 0, 0, 0]) == 1)
-dV_to_draw = (np.array([1, 0, 0, 0]) == 1)
+Ttaus = np.array([16, 32, 64, 128, 256])
+tau_to_draw = (np.array([1, 1, 1, 1, 1]) == 1)
+dV_to_draw = (np.array([1, 1, 1, 1]) == 1)
 
 to_draw_P_time = False
 
@@ -151,29 +154,29 @@ if(np.any(tau_to_draw)):
     ax_dV.legend()
 
 plt.show()
-
-
 '''
+
+
 # ========================== K(T) ================================
 # ======== local params ========
 temps = [0.1, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0, 55.0]
 #temps = [0.1, 15.0, 30.0, 45.0]
 #temps = [5.0, 10.0, 20.0, 25.0, 35.0, 40.0, 50.0, 55.0]
 
-ids =  [[0, 1, 2, 3],
-        [0, 4],
-        [0, 4],
-        [0, 1, 2, 3],
-        [0, 4],
-        [0, 4],
-        [0, 1, 2, 3],
-        [0, 4],
-        [0, 4],
-        [0, 1, 2, 3],
-        [0, 4],
-        [0, 4]]
+#ids =  [[0, 1, 2, 3],
+#        [0, 4],
+#        [0, 4],
+#        [0, 1, 2, 3],
+#        [0, 4],
+#        [0, 4],
+#        [0, 1, 2, 3],
+#        [0, 4],
+#        [0, 4],
+#        [0, 1, 2, 3],
+#        [0, 4],
+#        [0, 4]]
 
-ids =  [range(8)]*8
+ids =  [range(1)]*8
 
 #ids =  [[0, 1, 2, 3],
 #        [0, 1, 2, 3],
@@ -181,6 +184,14 @@ ids =  [range(8)]*8
 #        [0, 1, 2, 3]]
 
 # ======== proc ========
+N_t = len(temps)
+K = np.zeros(N_t)
+K_std = np.zeros(N_t)
+d_K = np.zeros(N_t)
+for t_i, temp in enumerate(temps):
+    K[t_i], d_K[t_i] = proc_model(temp, 0)
+
+'''
 N = len(ids)
 N_t = len(temps)
 K_arr = [[]] * N_t
@@ -202,15 +213,16 @@ for t_i, temp in enumerate(temps):
     K[t_i] = np.mean(K_arr[t_i])
     K_std[t_i] = np.std(K_arr[t_i])
     d_K[t_i] = K_std[t_i] / np.sqrt(len(K_arr[t_i]))
-
+'''
 print(K)
 print(d_K / K)
 print(K_std / K)
 
 # ======== draw ========
 fig, ax = my.get_fig('T (C)', 'K (Pa)', title='K(T)')
-#ax.errorbar(temps, K, yerr=d_K, label='averaged', fmt='o', mfc='none')
+ax.errorbar(temps, K, yerr=d_K, label='data', fmt='o', mfc='none')
 
+'''
 K_buf = np.zeros(N_t)
 d_K_buf = np.zeros(N_t)
 for i in range(8):
@@ -218,7 +230,7 @@ for i in range(8):
         K_buf[t_i] = K_arr[t_i][i]
         d_K_buf[t_i] = d_K_arr[t_i][i]
     ax.errorbar(temps, K_buf, yerr=d_K_buf, label=str(i), fmt='o', mfc='none')
+'''
 
 ax.legend()
 plt.show()
-'''
