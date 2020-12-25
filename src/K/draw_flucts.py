@@ -224,9 +224,11 @@ print('\ndV:')
 print(dV_K)
 print(dV_K / dV_d_K)
 
-fig, ax = my.get_fig('T (C)', 'K (GPa)', title='K(T)')
-ax.errorbar(temps, fl_K * 1e-9, yerr=fl_d_K * 1e-9, label='flucts', fmt='o', mfc='none')
-ax.errorbar(temps, dV_K * 1e-9, yerr=dV_d_K * 1e-9, label=r'$dV/V \sim 1e-2$', fmt='o', mfc='none')
+units = 1e6
+fig, ax = my.get_fig('T (C)', 'K (MPa)', title='K(T)')
+ax.errorbar(temps, fl_K / units, yerr=fl_d_K / units, label='flucts', fmt='o', mfc='none')
+ax.errorbar(temps, dV_K / units, yerr=dV_d_K / units, label=r'$dV/V \sim 1e-2$', fmt='o', mfc='none')
+ax.set_yticks(np.arange(3500, 5001, step=500))
 ax.legend()
 
 plt.show()
