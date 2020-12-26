@@ -17,6 +17,7 @@ compr_i = 1
 time_i = 0
 Ttau_i = 4
 id = 0
+temp = [0.1, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
 
 root_path = my.git_root_path()
 run_path = os.path.join(root_path, 'run')
@@ -31,6 +32,11 @@ if(argc not in [0]):
     exit(1)
     
 
+# ================ water anal ===================
+
+for t in temp:
+    my.run_it('python water_mobility.py -extremes 0 -hists 1 -time_cut 0.1 -temp ' + str(t))
+
 # ======= flucts ===========
 #time_i = int(args[0])
 #Ptau_i = int(args[1])
@@ -44,7 +50,8 @@ if(argc not in [0]):
 #                                     + ' ' + str(Ptau_i * 2 + 1) \
 #                          + ' -id ' + str(id) \
 #  
-                        + ' -preproc_mode force'  # flucts
+#                        + ' -preproc_mode force'  # flucts
+
 '''
 # ===== dV ===============
 gpu_id = Ttau_i % N_gpu
@@ -63,6 +70,7 @@ cmd = 'python run_K_dV.py -omp ' + str(omp) \
 my.run_it(cmd)
 '''
 
+'''
 # =============== launch tasks =========
 for dV_i, dV_mult in enumerate([3, 3.5, 4]):
     for Ttau_i in range(4):
@@ -86,7 +94,7 @@ for dV_i, dV_mult in enumerate([3, 3.5, 4]):
     
         my.run_it(cmd)
 # sbatch --reservation=test -J gromacs1 -p max1n -N 1 --ntasks-per-node=1 --gres=gpu:1 --wrap="python run.py -omp 6 -mpi 4 -do_mainrun 0 -time_ids 0"
-
+'''
 # ================ extract  maxsol_0 for the matlab plotting ===============
 #if(not len(args) in [1, 2]):
 #    print('usage:\n' + sys.argv[0] + '   job_dir   [stab_time(1000)]')
