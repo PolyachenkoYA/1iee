@@ -35,7 +35,7 @@ if(argc not in [0]):
 # ================ water anal ===================
 
 for t in temp:
-    my.run_it('python water_mobility.py -extremes 0 -hists 1 -time_cut 0.1 -temp ' + str(t))
+    my.run_it('python water_mobility.py -extremes 0 -hists 0 -time_cut 0.1 -do_S 1 -sgm 7.0 -temp ' + str(t))
 
 # ======= flucts ===========
 #time_i = int(args[0])
