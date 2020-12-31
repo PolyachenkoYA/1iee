@@ -8,26 +8,28 @@ stab_times = [200, 400, 600, 800, 1000];
 %stab_times = [1000];
 t = [1, 10, 15, 20, 25, 30, 35, 40];
 draw_jobs = 1;
-draw_stab_times = 1;
+draw_stab_times = 0;
 
 N_jobs = length(jobs);
 N_st = length(stab_times);
 N_lines = N_jobs * N_st;
 
+fit1 = zeros(N_jobs, N_st, 2);
+fit2 = zeros(N_jobs, N_st, 3);
 if(draw_jobs)
     for j_i = 1:N_jobs
         fig = getFig('$T (C^\circ)$', 'maxsol/$N_{supercells}$', ['maxsol($T$ : $P$ = 1); ' jobs{j_i}]);
         for st_i = 1:N_st
             line_id = (j_i - 1) * N_st + (st_i - 1);
             line_name = [jobs{j_i} '_' num2str(stab_times(st_i))];
-            draw_line(fig.ax, line_name, st_i, t);
+            [fit1(j_i, st_i, :), fit2(j_i, st_i, :)] = draw_line(fig.ax, line_name, st_i, t);
         end
     end
 end
 
 if(draw_stab_times)
     for st_i = 1:N_st
-        fig = getFig('$T (C^\circ)$', 'maxsol/$N_{supercells}$', ['maxsol($T$ : $P$ = 1); ' num2str(stab_times(st_i))]);
+        fig = getFig('$T (C^\circ)$', 'maxsol/$N_{supercells}$', ['maxsol($T$ : $P$ = 1); $t_{stab} = ' num2str(stab_times(st_i)/1000) '$ (ns)']);
         for j_i = 1:N_jobs    
             line_id = (j_i - 1) * N_st + (st_i - 1);
             line_name = [jobs{j_i} '_' num2str(stab_times(st_i))];

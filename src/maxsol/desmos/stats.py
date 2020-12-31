@@ -106,16 +106,17 @@ def process_model(model_path, trajectory, cut_time, xvgres_path=default_output_d
 
 args = sys.argv[1:]
 argc = len(args)
-if(argc < 6):
-    print_usage_and_exit()
+#if(argc < 6):
+#    print_usage_and_exit()
 
-[output_dir, modes, features, stab_time], correct_input = \
-    my.parse_args(args, \
+[output_dir, modes, features, stab_time], _ = \
+    my.parse_args(sys.argv[1:], \
                   [output_dir_flag, modes_flag, features_flag, stab_time_flag], \
                   possible_values=[None, all_modes, all_features, None], \
-                  possible_arg_numbers=[[1], ['+'], [1, 2], [0, 1]])
+                  possible_arg_numbers=[[1], ['+'], [1, 2], [0, 1]], \
+				  default_values=[['res/test'], [short_mode], [pressure_feat_str], [stab_time_default]])
 features.sort(key = lambda f: int(energy_features_ids[f]))
-stab_time = int(stab_time[0]) if len(stab_time) > 0 else stab_time_default
+#stab_time = int(stab_time[0]) if len(stab_time) > 0 else stab_time_default
 
 model_res_path = os.path.join(res_path, output_dir)
 model_path = os.path.join(run_path, output_dir)
