@@ -8,11 +8,19 @@ import scipy
 import scipy.stats
 import scipy.integrate
 from numba import jit
+from sklearn import mixture
+from matplotlib.colors import LogNorm
 
 import mylib as my
 import mdtraj as mdt
 
 sqrt_2pi = np.sqrt(2 * np.pi)
+
+def files_exist(filenames):
+    for f_name in filenames:
+        if(not os.path.isfile(f_name)):
+            return False
+    return True
 
 def make_hist(data, mn, mx, N_bins, title='data', scl='linear'):
     min_data = data.min()
@@ -94,6 +102,48 @@ def draw_Rcut(all_displs, time, x, x_cut, sgm, Ndgt=5):
     fig, ax = my.get_fig('$r^2$', 'n', title=r'$i = ' + str(ind) + r'; S \approx ' + my.f2str(S, Ndgt) + '$')
     ax.plot(x_draw, distr)
 
+def clustering_2D(x, y, x_lbl, y_lbl, n_comp=2, gauss_cut=1, N_X_grid=300, N_Y_grid=300, verbose=False):
+    ax = None
+    if(n_comp == 1):
+        if(verbose):
+            fig, ax = my.get_fig(x_lbl, y_lbl)
+            ax.scatter(x, y, s=1)
+        return ax
+    else:
+        N_water = len(x)
+        clasifier = mixture.GaussianMixture(n_components=n_comp, covariance_type='full')
+        X_train = np.array([x, y]).T
+        clasifier.fit(X_train)
+    
+        labels = clasifier.predict(X_train).astype(bool)
+        gauss_means = clasifier.means_
+        gauss_covs = clasifier.covariances_
+        free_water_mean_ind = np.argmax(gauss_means[:, 1])
+        free_water_mean = gauss_means[free_water_mean_ind, :]
+        free_water_cov = gauss_covs[free_water_mean_ind, :, :]
+        #free_probs = scipy.stats.multivariate_normal(mean=free_water_mean, cov=free_water_cov).pdf(X_train)
+        inv_cov = np.linalg.inv(free_water_cov)
+        gauss_dists = np.empty((N_water,))
+        for i in range(N_water):
+            v = X_train[i, :] - free_water_mean
+            gauss_dists[i] = np.dot(v, np.dot(inv_cov, v))
+        free_water_inds = (gauss_dists < gauss_cut)
+        
+        if(verbose):
+            fig, ax = my.get_fig(x_lbl, y_lbl)
+            X, Y = np.meshgrid(np.linspace(min(x), max(x), N_X_grid), np.linspace(min(y), max(y), N_Y_grid))
+            XX = np.array([X.ravel(), Y.ravel()]).T
+            Z = -clasifier.score_samples(XX)
+            Z = Z.reshape(X.shape)
+            CS = ax.contour(X, Y, Z, norm=LogNorm(vmin=1.0, vmax=100.0),levels=np.logspace(-1, 2, 15))
+            CB = plt.colorbar(CS, extend='both')
+        
+            ax.scatter(x, y, s=1, c='green', label='all')
+            ax.scatter(x[free_water_inds], y[free_water_inds], s=1, c='blue', label='free')
+            ax.legend(loc='best')
+    
+        return free_water_inds, free_water_mean, ax
+    
 
 # =============== paths ================
 root_path = my.git_root_path()
@@ -112,25 +162,27 @@ topol_filename = 'topol.top'
 initial_pdb_filename = 'initial_npt.pdb'
 
 N_r2_bins = 50
-r2_min = 3e0
-r2_max = 3e2
+r2_min = 7e0
+r2_max = 1e3
 R_cut = 0.75
 S_cut = 0.5
 
 # ============== arg parse ==========================
 supercell_str = ''.join([str(x) for x in supercell])
 
-[T, draw_extremes, draw_hists, time_cut, draw_Rcuts, verbose, do_S, sgm], _ = \
-    my.parse_args(sys.argv[1:], ['-temp', '-extremes', '-hists', '-time_cut', '-Rcut', '-verbose', '-do_S', '-sgm'], \
-                  possible_values=[None, ['0', '1'], ['0', '1'], None, None, ['0', '1'], ['0', '1'], None], \
-                  possible_arg_numbers=[[1], [0, 1], [0, 1], [0, 1], None, [0, 1], [0, 1], [0, 1]], \
-                  default_values=[None, ['0'], ['0'], ['10'], [], ['0'], ['0'], None])
+[T, draw_extremes, draw_hists, time_cut, draw_Rcuts, verbose, recomp, sgm, gauss_cut], _ = \
+    my.parse_args(sys.argv[1:], ['-temp', '-extremes', '-hists', '-time_cut', '-Rcut', '-verbose', '-recomp', '-sgm', '-gauss_cut'], \
+                  possible_values=[None, ['0', '1'], ['0', '1'], None, None, ['0', '1'], ['0', '1'], None, None], \
+                  possible_arg_numbers=[[1], [0, 1], [0, 1], [0, 1], None, [0, 1], [0, 1], [1], [0, 1]], \
+                  default_values=[None, ['0'], ['0'], ['10'], [], ['0'], ['0'], None, ['1']])
 T = float(T)
+sgm = float(sgm)
 time_cut = float(time_cut[0])
+gauss_cut = float(gauss_cut[0])
 draw_extremes = (draw_extremes[0] == '1')
 draw_hists = (draw_hists[0] == '1')
 verbose = (verbose[0] == '1')
-do_S = (do_S[0] == '1')
+recomp = (recomp[0] == '1')
 draw_Rcuts = [float(r) for r in draw_Rcuts]
 
 model_name = 'flucts_temp' + my.f2str(T) + '_0'
@@ -138,92 +190,121 @@ model_path = os.path.join(run_path, model_name)
 traj_filepath = os.path.join(model_path, traj_filename)
 topol_filepath = os.path.join(model_path, topol_filename)
 init_pdb_filepath = os.path.join(model_path, initial_pdb_filename)
-
-if(not os.path.isfile(init_pdb_filepath)):
-    os.chdir(model_path)
-    my.run_it('gmx_mpi trjconv -s npt.gro -f npt.xtc -skip 1000000000 -o ' + initial_pdb_filename + ' < output_whole_sys0.in')
-if(not os.path.isfile(traj_filepath)):
-    os.chdir(model_path)
-    my.run_it('gmx_mpi trjconv -s npt.gro -f npt.xtc -pbc nojump -o ' + traj_filename + ' < output_whole_sys0.in')
-
-traj = mdt.load(traj_filepath, top=init_pdb_filepath)
-top = traj.topology
-N_frames = traj.xyz.shape[0]
-N_atoms = traj.xyz.shape[1]
-time = np.arange(0, N_frames) * Dt
-w_crd = traj.xyz[:, top.select('water'), :]
-N_water = w_crd.shape[1]
-if(verbose):
-    print('traj shape: ', traj.xyz.shape)
-    print('top: ', top)
-
-timecut_ind = time > time_cut
-all_displs = np.sum((w_crd[timecut_ind, :, :] - w_crd[0, :, :])**2, axis=2)
-time = time[timecut_ind]
-N_frames = len(time)
-max_displ = np.max(all_displs, axis=0)
-min_displ = np.min(all_displs, axis=0)
-r2_range = max_displ - min_displ
-displ_ind = np.argsort(max_displ)
-w_crd = w_crd[:, displ_ind, :]
-all_displs = all_displs[:, displ_ind]
-max_displ = max_displ[displ_ind]
-if(sgm is None):
-    sgm = max(max_displ) / N_frames / 2
-else:
-    sgm = float(sgm[0])
-
-D = np.empty((N_water,))
-R = np.empty((N_water,))
-R_pvalue = np.empty((N_water,))
-I2 = np.empty((N_water,))
-I4 = np.empty((N_water,))
-S = np.empty((N_water,))
-for i in range(N_water):
-    #linfit = np.polyfit(time, all_displs[:, i], 1)
-    #D[i] = linfit[0] / 6
-    #R[i], R_pvalue[i] = scipy.stats.pearsonr(time, all_displs[:, i])
-    R[i] = my_R(time, all_displs[:, i])
-
-    #I2[i] = np.log(np.sum(all_displs[:, i]**2) / (N_frames * r2_range[i]**2 / 3))
-    #I4[i] = np.log(np.sum(all_displs[:, i]**4) / (N_frames * r2_range[i]**4 / 5))
-    if(do_S):
-        S[i] = get_S(all_displs[:, i], sgm)
-
+R_filename = os.path.join(model_path, 'R_time' + my.f2str(time_cut) + '.npy')
+D_filename = os.path.join(model_path, 'D_time' + my.f2str(time_cut) + '.npy')
+S_filename = os.path.join(model_path, 'S_time' + my.f2str(time_cut) + '_sgm' + my.f2str(sgm) + '.npy')
+maxdispl_filename = os.path.join(model_path, 'maxdispl_time' + my.f2str(time_cut) + '.npy')
+data_files = [R_filename, S_filename, D_filename, maxdispl_filename]
+recomp = recomp or not files_exist(data_files)
+if(recomp):
+    if(not os.path.isfile(init_pdb_filepath)):
+        os.chdir(model_path)
+        my.run_it('gmx_mpi trjconv -s npt.gro -f npt.xtc -skip 1000000000 -o ' + initial_pdb_filename + ' < output_whole_sys0.in')
+    if(not os.path.isfile(traj_filepath)):
+        os.chdir(model_path)
+        my.run_it('gmx_mpi trjconv -s npt.gro -f npt.xtc -pbc nojump -o ' + traj_filename + ' < output_whole_sys0.in')
+    
+    traj = mdt.load(traj_filepath, top=init_pdb_filepath)
+    top = traj.topology
+    N_frames = traj.xyz.shape[0]
+    N_atoms = traj.xyz.shape[1]
+    time = np.arange(0, N_frames) * Dt
+    w_crd = traj.xyz[:, top.select('water'), :]
+    N_water = w_crd.shape[1]
     if(verbose):
-        if(not i%100):
-            print('done: ' + my.f2str((i+1)/N_water * 100) + ' %      \r', end='')
+        print('traj shape: ', traj.xyz.shape)
+        print('top: ', top)
+
+    timecut_ind = time > time_cut
+    all_displs = np.sum((w_crd[timecut_ind, :, :] - w_crd[0, :, :])**2, axis=2)
+    time = time[timecut_ind]
+    N_frames = len(time)
+    max_displ = np.max(all_displs, axis=0)
+    min_displ = np.min(all_displs, axis=0)
+    r2_range = max_displ - min_displ
+    displ_ind = np.argsort(max_displ)
+    w_crd = w_crd[:, displ_ind, :]
+    all_displs = all_displs[:, displ_ind]
+    max_displ = max_displ[displ_ind]
+#    if(sgm is None):
+#        sgm = max(max_displ) / N_frames / 2
+#    else:
+#        sgm = float(sgm[0])
+    
+    D = np.empty((N_water,))
+    R = np.empty((N_water,))
+    R_pvalue = np.empty((N_water,))
+    I2 = np.empty((N_water,))
+    I4 = np.empty((N_water,))
+    S = np.empty((N_water,))
+    for i in range(N_water):
+        linfit = np.polyfit(time, all_displs[:, i], 1)
+        D[i] = linfit[0] / 6
+        #R[i], R_pvalue[i] = scipy.stats.pearsonr(time, all_displs[:, i])
+        R[i] = my_R(time, all_displs[:, i])
+    
+        #I2[i] = np.log(np.sum(all_displs[:, i]**2) / (N_frames * r2_range[i]**2 / 3))
+        #I4[i] = np.log(np.sum(all_displs[:, i]**4) / (N_frames * r2_range[i]**4 / 5))
+        S[i] = get_S(all_displs[:, i], sgm)
+    
+        if(verbose):
+            if(not i%100):
+                print('done: ' + my.f2str((i+1)/N_water * 100) + ' %      \r', end='')
+
+    with open(S_filename, 'wb') as f:
+        np.save(f, S)
+    with open(R_filename, 'wb') as f:
+        np.save(f, R)
+    with open(D_filename, 'wb') as f:
+        np.save(f, D)
+    with open(maxdispl_filename, 'wb') as f:
+        np.save(f, max_displ)
+else:
+    with open(R_filename, 'rb') as f:
+        R = np.load(f)
+    with open(S_filename, 'rb') as f:
+        S = np.load(f)
+    with open(D_filename, 'rb') as f:
+        D = np.load(f)
+    with open(maxdispl_filename, 'rb') as f:
+        max_displ = np.load(f)
+    N_water = len(R)
+    
 R_min_ind = np.argmin(R)
 R_max_ind = np.argmax(R)
 S_min_ind = np.argmin(S)
 S_max_ind = np.argmax(S)
-I2_max_ind = np.argmax(I2)
-Ru = (R - np.mean(R)) / np.std(R)
-if(do_S):
-    Su = (S - np.mean(S)) / np.std(S)
+#I2_max_ind = np.argmax(I2)
 
-    N_mobile = np.sum((R > R_cut) & (S > S_cut))
-    print('N_mob: ', N_mobile, '; fraction: ', N_mobile / N_water)
-#print(np.sum(R > R_cut))
+SR_inds, [S_mean, R_mean], ax_SR = clustering_2D(S, R, '$S$', '$R$', gauss_cut=gauss_cut, verbose=verbose)
+ax_SD = clustering_2D(S, D, '$S$', '$D$', gauss_cut=gauss_cut, verbose=verbose, n_comp=1)
+ax_Sr = clustering_2D(S, np.sqrt(max_displ), '$S$', '$r_{max}$', gauss_cut=gauss_cut, verbose=verbose, n_comp=1)
+
+N_SR_cut = np.sum((R > R_cut) & (S > S_cut))
+N_SR_clust = np.sum(SR_inds)
+#N_SD = np.sum(SD_inds)
+if(verbose):
+    print('N_cut: ', N_SR_cut, '; fraction: ', N_SR_cut / N_water)
+    print('N_clust: ', N_SR_clust, '; fraction: ', N_SR_clust / N_water)
+else:
+    print(N_SR_cut, N_SR_clust, N_water, S_mean, R_mean)
 
 if(verbose):
     if(draw_hists):
-    #    r2_hist, r2_bins = make_hist(max_displ, r2_min, r2_max, N_r2_bins, scl='log', title='$r_{final}^2$ ($nm^2$)')
-    #    D_hist, D_bins = make_hist(D, -1e10, 1e10, 100, scl='linear', title='$D$ ($nm^2/ns$)')
-        R_hist, R_bins = make_hist(R, -2, 2, 100, scl='linear', title='R')
-        R_hist_cut, R_bins_cut = make_hist(R, R_cut, 2, 50, scl='linear', title='R')
+        #r2_hist, r2_bins = make_hist(max_displ, r2_min, r2_max, N_r2_bins, scl='log', title='$r_{final}^2$ ($nm^2$)')
+        #D_hist, D_bins = make_hist(D, -1e10, 1e10, 100, scl='linear', title='$D$ ($nm^2/ns$)')
+        #R_hist, R_bins = make_hist(R, -2, 2, 100, scl='linear', title='R')
+        #R_hist_cut, R_bins_cut = make_hist(R, R_cut, 2, 50, scl='linear', title='R')
     
         #fig_I, ax_I = my.get_fig('$I_2$', '$I_4$')
         #ax_I.scatter(I2, I4, s=4)
         #I2_hist, I2_bins = make_hist(I2, -20, 20, 100, scl='linear', title='$I_2$')
         #I4_hist, I4_bins = make_hist(I4, -20, 20, 100, scl='linear', title='$I_4$')
     
-        if(do_S):
-            S_hist, S_bins = make_hist(S, -20, 20, 100, scl='linear', title='$S$')
-            fig_SR, ax_SR = my.get_fig('$S$', '$R$')
-            ax_SR.scatter(S, R, s=1)
-            ax_SR.plot([S_cut, S_cut], [min(R), max(R)], c='red')
-            ax_SR.plot([min(S), max(S)], [R_cut, R_cut], c='red')
+        #S_hist, S_bins = make_hist(S, -20, 20, 100, scl='linear', title='$S$')
+
+        ax_SR.plot([S_cut, S_cut], [min(R), max(R)], c='red')
+        ax_SR.plot([min(S), max(S)], [R_cut, R_cut], c='red')
     
     if(draw_extremes):
         y_lbl = '$\sqrt{r^2}$ ($nm$)'
