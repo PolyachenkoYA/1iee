@@ -18,6 +18,7 @@ time_i = 0
 Ttau_i = 4
 id = 0
 temp = [0.1, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+gauss_dists = np.linspace(2.5, 7.0, 25)
 
 root_path = my.git_root_path()
 run_path = os.path.join(root_path, 'run')
@@ -30,12 +31,13 @@ argc = len(args)
 if(argc not in [0]):
     print('usage:\n' + sys.argv[0] + '')
     exit(1)
-    
 
 # ================ water anal ===================
 
 for t in temp:
-    my.run_it('python water_mobility.py -extremes 0 -hists 0 -time_cut 0.1 -sgm 6.0 -gauss_cut 5.0 -temp ' + str(t), verbose=False)
+    my.run_it('python water_mobility.py -extremes 0 -hists 0 -time_cut 0.1 -sgm 6.0 -gauss_cut 4.3 -temp ' + str(t), verbose=False)
+#for g in gauss_dists:
+#    my.run_it('python water_mobility.py -extremes 0 -hists 0 -time_cut 0.1 -sgm 6.0 -gauss_cut ' + str(g) + ' -temp 25', verbose=False)
 
 # ======= flucts ===========
 #time_i = int(args[0])
