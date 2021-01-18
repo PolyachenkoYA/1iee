@@ -4,6 +4,8 @@ import numpy as np
 import subprocess as sp
 import multiprocessing
 import matplotlib.pyplot as plt
+import matplotlib
+from matplotlib import cm as colormaps
 import scipy
 import scipy.stats
 import scipy.integrate
@@ -22,34 +24,39 @@ def files_exist(filenames):
             return False
     return True
 
-def make_hist(data, mn, mx, N_bins, y_lbl='y', scl='linear', title=None):
+def comp_hist(data, mn, mx, N_bins, lin_scl=True, dens=False):
     min_data = data.min()
     max_data = data.max()
     grid_min = max(mn, min_data)
     grid_max = min(mx, max_data)
-    lin_scl = (scl == 'linear')
-    if(lin_scl):
-        bins = np.concatenate(([min_data], np.linspace(grid_min, grid_max, N_bins - 1), [max_data]))
-    else:
-        bins = np.concatenate(([min_data], np.logspace(np.log10(grid_min), np.log10(grid_max), N_bins - 1), [max_data]))
+    bins = np.concatenate(([] if min_data == grid_min else [min_data], \
+                           np.linspace(grid_min, grid_max, N_bins + 1) if lin_scl else np.logspace(np.log10(grid_min), np.log10(grid_max), N_bins + 1), \
+                           [] if max_data == grid_max else [max_data]))
 
-    hist, _ = np.histogram(data, bins=bins)
-    max_dens = np.max(hist) / np.sum(hist) / abs(bins[2] - bins[1])
+    hist, _ = np.histogram(data, bins=bins, density=dens)
 
-    fig, ax = my.get_fig('index', y_lbl, yscl=scl)
-    ax.plot(np.arange(len(data)), data, '.')
+    return hist, bins, grid_min, grid_max
+
+def make_hist(data, mn, mx, N_bins, y_lbl='y', scl='linear', title=None, plot_vs_index=False, dens=False):
+    lin_scl = (scl=='linear')
+    hist, bins, grid_min, grid_max = comp_hist(data, mn, mx, N_bins, lin_scl=lin_scl, dens=dens)
+    max_dens = (np.max(dens) if dens else np.max(hist) / np.sum(hist) / abs(bins[2] - bins[1]))
+
+    if(plot_vs_index):
+        fig, ax = my.get_fig('index', y_lbl, yscl=scl)
+        ax.plot(np.arange(len(data)), data, '.')
 
     if(title is None):
         title = '$p(' + y_lbl + ')$'
     fig_hist, ax_hist = my.get_fig(y_lbl, '$p_{dens}$', xscl=scl, title=title)
-    ax_hist.hist(data, bins=bins, density=lin_scl)
+    plt_hist, plt_bins, _ = ax_hist.hist(data, bins=bins, density=dens)
 
     if(grid_min < mn):
         ax_hist.plot([mn, mn], [0, max_dens], c='red')
-    if(grid_min > mx or True):
+    if(grid_min > mx):
         ax_hist.plot([mx, mx], [0, max_dens], c='red')
 
-    return hist, bins
+    return hist, bins, ax_hist
 
 def my_R(x, y):
     x = x - np.mean(x)
@@ -152,7 +159,20 @@ def clustering_2D(x, y, x_lbl, y_lbl, n_comp=2, gauss_cut=1, N_X_grid=300, N_Y_g
             ax.legend(loc='best')
     
         return free_water_inds, free_water_mean, ax
-    
+#@jit
+def get_D_dyn(w_crd, N_D, step, win):
+    N_frames = w_crd.shape[0]
+    N_water = w_crd.shape[1]
+    D_dyn = np.empty((N_D, N_water))
+    win_ind = np.arange(win) + 1
+    win_time = win_ind[:, np.newaxis] * Dt
+    for i in range(N_water):
+        for j in np.arange(N_D):
+            displ = (w_crd[j * step + win_ind, i, :] - w_crd[j * step, i, :])**2
+            y = np.sum(displ, axis=1)[:, np.newaxis]
+            D_dyn[j, i], _, _, _ = scipy.linalg.lstsq(win_time, y)
+
+    return D_dyn / 6
 
 # =============== paths ================
 root_path = my.git_root_path()
@@ -163,30 +183,30 @@ res_path = os.path.join(root_path, 'res')
 # ================ params =================
 
 T_C2K = 273.15
-D_bulk = { 0.1: 1.248,
-           5.0: 1.489, 
-          10.0: 1.7,
-          15.0: 1.947, 
-          20.0: 2.228, 
-          25.0: 2.486, 
-          30.0: 2.81, 
-          35.0: 3.13, 
-          40.0: 3.45,  
-          45.0: 3.81, 
-          50.0: 4.18,  
-          55.0: 4.56}  # C : nm^2/ns
-d_D_bulk = { 0.1: 0.003,
-             5.0: 0.025, 
-            10.0: 0.02,
-            15.0: 0.001, 
-            20.0: 0.025, 
-            25.0: 0.008, 
-            30.0: 0.01, 
-            35.0: 0.003, 
-            40.0: 0.003,  
-            45.0: 0.05, 
-            50.0: 0.04,  
-            55.0: 0.04}  # C : nm^2/ns
+D_bulk = { 0.1: 2.0833,
+           5.0: 2.3548,
+          10.0: 2.6759,
+          15.0: 2.9911,
+          20.0: 3.3278,
+          25.0: 3.7376,
+          30.0: 4.1991,
+          35.0: 4.4784,
+          40.0: 4.8772,
+          45.0: 5.3572,
+          50.0: 5.7396,
+          55.0: 6.21449}  # C : nm^2/ns
+d_D_bulk = { 0.1: 0.03,
+             5.0: 0.03, 
+            10.0: 0.016,
+            15.0: 0.015, 
+            20.0: 0.04, 
+            25.0: 0.03, 
+            30.0: 0.04, 
+            35.0: 0.03, 
+            40.0: 0.01,  
+            45.0: 0.08, 
+            50.0: 0.016,  
+            55.0: 0.11}  # C : nm^2/ns
 
 dt = 2e-6    # 1 fs = 1e-6 ns
 Dt = 0.5     # ns
@@ -195,7 +215,6 @@ traj_filename = 'npt_nojump.xtc'
 topol_filename = 'topol.top'
 initial_pdb_filename = 'initial_npt.pdb'
 
-N_r2_bins = 50
 r2_min = 7e0
 r2_max = 1e3
 R_cut = 0.75
@@ -204,19 +223,22 @@ S_cut = 0.5
 # ============== arg parse ==========================
 supercell_str = ''.join([str(x) for x in supercell])
 
-[T, draw_extremes, draw_hists, time_cut, draw_Rcuts, verbose, recomp, sgm, gauss_cut], _ = \
-    my.parse_args(sys.argv[1:], ['-temp', '-extremes', '-hists', '-time_cut', '-Rcut', '-verbose', '-recomp', '-sgm', '-gauss_cut'], \
-                  possible_values=[None, ['0', '1'], ['0', '1'], None, None, ['0', '1'], ['0', '1'], None, None], \
-                  possible_arg_numbers=[[1], [0, 1], [0, 1], [0, 1], None, [0, 1], [0, 1], [1], [0, 1]], \
-                  default_values=[None, ['0'], ['0'], ['10'], [], ['0'], ['0'], None, ['1']])
+[T, draw_extremes, draw_hists, time_cut, draw_Rcuts, verbose, recomp, sgm, gauss_cut, D_timewindow, D_timestep, N_bins], _ = \
+    my.parse_args(sys.argv[1:], ['-temp', '-extremes', '-hists', '-time_cut', '-Rcut', '-verbose', '-recomp', '-sgm', '-gauss_cut', '-D_timewindow', '-D_timestep', '-N_bins'], \
+                  possible_values=[None, ['0', '1'], ['0', '1'], None, None, ['0', '1'], ['0', '1'], None, None, None, None, None], \
+                  possible_arg_numbers=[[1], [0, 1], [0, 1], [0, 1], None, [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]], \
+                  default_values=[None, ['0'], ['0'], ['0'], [], ['0'], ['0'], ['6.0'], ['5.0'], ['2'], ['1'], ['100']])
 T = float(T)
-sgm = float(sgm)
+sgm = float(sgm[0])
+N_bins = int(N_bins[0])
 time_cut = float(time_cut[0])
 gauss_cut = float(gauss_cut[0])
 draw_extremes = (draw_extremes[0] == '1')
 draw_hists = (draw_hists[0] == '1')
 verbose = (verbose[0] == '1')
 recomp = (recomp[0] == '1')
+D_timewindow = int(D_timewindow[0])
+D_timestep = int(D_timestep[0])
 draw_Rcuts = [float(r) for r in draw_Rcuts]
 
 model_name = 'flucts_temp' + my.f2str(T) + '_0'
@@ -226,10 +248,12 @@ topol_filepath = os.path.join(model_path, topol_filename)
 init_pdb_filepath = os.path.join(model_path, initial_pdb_filename)
 R_filename = os.path.join(model_path, 'R_time' + my.f2str(time_cut) + '.npy')
 D_filename = os.path.join(model_path, 'D_time' + my.f2str(time_cut) + '.npy')
+Ddyn_filename = os.path.join(model_path, 'Ddyn_W' + my.f2str(D_timewindow) + '_s' + my.f2str(D_timestep) + '.npy')
 S_filename = os.path.join(model_path, 'S_time' + my.f2str(time_cut) + '_sgm' + my.f2str(sgm) + '.npy')
 displs_filename = os.path.join(model_path, 'displs_time' + my.f2str(time_cut) + '.npy')
 maxdispl_filename = os.path.join(model_path, 'maxdispl_time' + my.f2str(time_cut) + '.npy')
-data_files = [R_filename, S_filename, D_filename, maxdispl_filename, displs_filename]
+wcrd_filename = os.path.join(model_path, 'water_coord.npy')
+data_files = [R_filename, S_filename, D_filename, maxdispl_filename, displs_filename, wcrd_filename, Ddyn_filename]
 recomp = recomp or not files_exist(data_files)
 if(recomp):
     if(not os.path.isfile(init_pdb_filepath)):
@@ -254,6 +278,9 @@ if(recomp):
     all_displs = np.sum((w_crd[timecut_ind, :, :] - w_crd[0, :, :])**2, axis=2)
     time = time[timecut_ind]
     N_frames = len(time)
+    N_D_dyn = (N_frames - D_timewindow - 1) // D_timestep + 1
+    timewindow_ind = np.arange(D_timewindow)
+    timewindow_time = timewindow_ind[:, np.newaxis] * Dt
     max_displ = np.max(all_displs, axis=0)
     min_displ = np.min(all_displs, axis=0)
     r2_range = max_displ - min_displ
@@ -267,24 +294,31 @@ if(recomp):
 #        sgm = float(sgm[0])
     
     D = np.empty((N_water,))
+    D_dyn = np.empty((N_D_dyn, N_water))
     R = np.empty((N_water,))
     R_pvalue = np.empty((N_water,))
     I2 = np.empty((N_water,))
     I4 = np.empty((N_water,))
     S = np.empty((N_water,))
     for i in range(N_water):
-        linfit = np.polyfit(time, all_displs[:, i], 1)
-        D[i] = linfit[0] / 6
+        #linfit = np.polyfit(time, all_displs[:, i], 1)
+        linfit, _, _, _ = scipy.linalg.lstsq(time[:, np.newaxis], all_displs[:, i][:, np.newaxis])
+        D[i] = linfit / 6
         #R[i], R_pvalue[i] = scipy.stats.pearsonr(time, all_displs[:, i])
         #R[i] = my_R(time, all_displs[:, i])
-    
         #I2[i] = np.log(np.sum(all_displs[:, i]**2) / (N_frames * r2_range[i]**2 / 3))
         #I4[i] = np.log(np.sum(all_displs[:, i]**4) / (N_frames * r2_range[i]**4 / 5))
         #S[i] = get_S(all_displs[:, i], sgm)
-    
+
+        #for j in np.arange(N_D_dyn):
+        #    displ = (w_crd[j * D_timestep + timewindow_ind, i, :] - w_crd[j * D_timestep, i, :])**2
+        #    D_dyn[j, i], _, _, _ = \
+        #        scipy.linalg.lstsq(timewindow_time, np.sum(displ, axis=1)[:, np.newaxis])
+
         if(verbose):
             if(not i%100):
-                print('done: ' + my.f2str((i+1)/N_water * 100) + ' %      \r', end='')
+                print('main done: ' + my.f2str((i+1)/N_water * 100) + ' %      \r', end='')
+    D_dyn /= 6
 
     with open(S_filename, 'wb') as f:
         np.save(f, S)
@@ -296,6 +330,11 @@ if(recomp):
         np.save(f, max_displ)
     with open(displs_filename, 'wb') as f:
         np.save(f, all_displs)
+    with open(wcrd_filename, 'wb') as f:
+        np.save(f, w_crd)
+#    with open(Ddyn_filename, 'wb') as f:
+#        np.save(f, D_dyn)
+
 else:
     with open(R_filename, 'rb') as f:
         R = np.load(f)
@@ -307,10 +346,28 @@ else:
         max_displ = np.load(f)
     with open(displs_filename, 'rb') as f:
         all_displs = np.load(f)
+    with open(wcrd_filename, 'rb') as f:
+        w_crd = np.load(f)
+    with open(Ddyn_filename, 'rb') as f:
+        D_dyn = np.load(f)
     N_water = len(R)
     N_frames = all_displs.shape[0]
     start_time_ind = np.ceil(time_cut / Dt)
     time = np.arange(start_time_ind, start_time_ind + N_frames) * Dt
+    N_D_dyn = D_dyn.shape[0]
+    #N_water = D_dyn.shape[1]
+
+    D_grid = np.empty((N_D_dyn, N_bins))
+    time_grid = np.empty((N_D_dyn, N_bins))
+    hist_grid = np.empty((N_D_dyn, N_bins))
+    for i in range(N_D_dyn):
+        time_grid[i, :] = time[i]
+        hist_grid[i, :], bins, grid_min, grid_max = comp_hist(D_dyn[i, :], -1, 1e10, N_bins)
+        D_grid[i, :] = (bins[1:] + bins[:-1]) / 2
+        hist_grid[i, :] /= np.sum(hist_grid[i, :]) * abs(bins[2] - bins[1])
+
+        if(verbose):
+            print('postproc done: ' + my.f2str((i+1)/N_D_dyn * 100) + ' %      \r', end='')
     
 #R_min_ind = np.argmin(R)
 #R_max_ind = np.argmax(R)
@@ -332,14 +389,35 @@ else:
 #    print(N_SR_cut, N_SR_clust, N_water, S_mean, R_mean)
     #print(N_SR_clust / N_water)
 
+D_hist, D_bins, grid_min, grid_max = comp_hist(D, -1, D_bulk[T], N_bins, dens=True)
+dens = D_hist
+max_ind = np.argmax(dens)
+D_hist_x = (D_bins[1:] + D_bins[:-1]) / 2
+D_cr = D_hist_x[max_ind + np.argmin(np.abs(dens[max_ind : ] - 0.5))]
+#print(T, ' : ', D_cr)
+print(D_cr)
+
 if(verbose):
+    #fig_relD, ax_relD = my.get_fig('$time (ns)$', '$D/D_0$', yscl='linear')
+    #fig_relD, ax_relD = my.get_fig('$time (ns)$', '$log_{10}(D/D_0)$')
+    #for i in range(N_bins, N_bins+1):
+    #for i in np.random.randint(N_water, size=N_bins):
+        #ax_relD.plot(time[range(N_D_dyn)], D_dyn[:, i] / D_dyn[0, i])
+        #ax_relD.plot(time[range(N_D_dyn)], np.log10(D_dyn[:, i] / D_dyn[0, i]))
+
+#    fig_Ddyn, ax_Ddyn = my.get_fig('$log_{10}(D)$ ($nm^2/ns$)', 'time (ns)', projection='3d', zlbl='$p_{dens}$', title='D(t)')
+#    D_hist_surf = ax_Ddyn.plot_surface(np.log10(D_grid[:, 2:]), time_grid[:, 2:], hist_grid[:, 2:], cmap=matplotlib.cm.coolwarm)
+#    fig_Ddyn.colorbar(D_hist_surf)
+
     if(draw_hists):
-        #r2_hist, r2_bins = make_hist(max_displ, r2_min, r2_max, N_r2_bins, scl='log', y_lbl='$r_{final}^2$ ($nm^2$)')
-        D_hist, D_bins = make_hist(D, -1e10, D_bulk[T], N_r2_bins, scl='linear', \
+        #r2_hist, r2_bins = make_hist(max_displ, r2_min, r2_max, N_bins, scl='log', y_lbl='$r_{final}^2$ ($nm^2$)')
+        D_hist, D_bins, D_ax = make_hist(D, -1, D_bulk[T], N_bins, scl='linear', dens=True, \
                                    y_lbl='$D$ ($nm^2/ns$)', \
                                    title='$T = ' + my.f2str(T) + '$ $(C^{\circ}); D_{bulk} = ' + my.f2str(D_bulk[T]) + '$ $(nm^2/ns$)')
-        #R_hist, R_bins = make_hist(R, -2, 2, N_r2_bins, scl='linear', y_lbl='R')
-        #R_hist_cut, R_bins_cut = make_hist(R, R_cut, 2, N_r2_bins, scl='linear', y_lbl='R')
+        #R_hist, R_bins = make_hist(R, -2, 2, N_bins, scl='linear', y_lbl='R')
+        #R_hist_cut, R_bins_cut = make_hist(R, R_cut, 2, N_bins, scl='linear', y_lbl='R')
+
+        D_ax.plot([D_cr, D_cr], [0, max(dens)], c='red')
     
         #fig_I, ax_I = my.get_fig('$I_2$', '$I_4$')
         #ax_I.scatter(I2, I4, s=4)
@@ -382,9 +460,3 @@ if(verbose):
             draw_Rcut(all_displs, time, R, r_cut, sgm)
 
     plt.show()
-'''
-    T     Rcut   d
-    0.1   0.82   0.05
-    10    0.46   0.02
-    15    0.75   0.5
-'''

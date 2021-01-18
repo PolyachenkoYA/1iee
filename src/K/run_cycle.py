@@ -17,7 +17,7 @@ compr_i = 1
 time_i = 0
 Ttau_i = 4
 id = 0
-temp = [0.1, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+temp = [0.1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
 gauss_dists = np.linspace(2.5, 7.0, 25)
 
 root_path = my.git_root_path()
@@ -35,7 +35,8 @@ if(argc not in [0]):
 # ================ water anal ===================
 
 for t in temp:
-    my.run_it('python water_mobility.py -extremes 0 -hists 0 -time_cut 0.1 -sgm 6.0 -gauss_cut 4.3 -temp ' + str(t), verbose=False)
+    my.run_it('python water_mobility.py -temp ' + str(t) + ' -recomp 1 -N_bins 100', verbose=False)
+    #my.run_it('python water_mobility.py -temp ' + str(t) + ' -verbose 1 -D_timewindow ' + str(tw) + ' -D_timestep 1', verbose=False)
 #for g in gauss_dists:
 #    my.run_it('python water_mobility.py -extremes 0 -hists 0 -time_cut 0.1 -sgm 6.0 -gauss_cut ' + str(g) + ' -temp 25', verbose=False)
 

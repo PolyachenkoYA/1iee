@@ -51,17 +51,17 @@ fi
 $gmx_serial grompp -f eql.mdp -c min2.gro -p topol.top -o eql.tpr
 if [ $mpiN -gt 1 ]
 then
-    $gmx_mdrun mdrun -deffnm eql -ntmpi $mpiN -ntomp $ompN  -gpu_id $gpu_id
+    $gmx_mdrun mdrun -v -deffnm eql -ntmpi $mpiN -ntomp $ompN  -gpu_id $gpu_id
 else
-    $gmx_mdrun mdrun -deffnm eql -ntomp $ompN  -gpu_id $gpu_id
+    $gmx_mdrun mdrun -v -deffnm eql -ntomp $ompN  -gpu_id $gpu_id
 fi
 
 $gmx_serial grompp -f eql2.mdp -c eql.gro -p topol.top -o eql2.tpr
 if [ $mpiN -gt 1 ]
 then
-    $gmx_mdrun mdrun -deffnm eql2 -ntmpi $mpiN -ntomp $ompN  -gpu_id $gpu_id
+    $gmx_mdrun mdrun -v -deffnm eql2 -ntmpi $mpiN -ntomp $ompN  -gpu_id $gpu_id
 else
-    $gmx_mdrun mdrun -deffnm eql2 -ntomp $ompN  -gpu_id $gpu_id
+    $gmx_mdrun mdrun -v -deffnm eql2 -ntomp $ompN  -gpu_id $gpu_id
 fi
 
 cp eql2.gro nvt.gro

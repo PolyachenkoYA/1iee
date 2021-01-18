@@ -25,7 +25,7 @@ times = [0.2, 0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5]
 times = [0.2500, 0.3053, 0.3727, 0.4551, 0.5558, 0.6786, 0.8286, 1.012, 1.235, 1.5085, 1.842, 2.249, 2.746, 3.3535, 4.095, 5.000]
 times = [0.25, 0.5, 1.0, 2.0]
 temps = [0.1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
-temps = [0, 27, 77]
+#temps = [0, 27, 77]
 
 # ============== arg parse ====================
 params = temps
@@ -54,6 +54,7 @@ preproc_mode = preproc_mode[0]
 for param_i in param_ids:
     time = 2.0
     gpu_id = param_i % N_gpus
+    gpu_id = param_i // 3
     Tmp = temps[param_i]
     nsteps = np.intc(time / dt)
     model_name = os.path.join('watercube_T' + my.f2str(Tmp))
