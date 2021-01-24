@@ -18,6 +18,9 @@ import mdtraj as mdt
 
 sqrt_2pi = np.sqrt(2 * np.pi)
 
+def unitize(x):
+    return (x - np.mean(x)) / np.std(x)
+
 def files_exist(filenames):
     for f_name in filenames:
         if(not os.path.isfile(f_name)):
@@ -40,7 +43,7 @@ def comp_hist(data, mn, mx, N_bins, lin_scl=True, dens=False):
 def make_hist(data, mn, mx, N_bins, y_lbl='y', scl='linear', title=None, plot_vs_index=False, dens=False):
     lin_scl = (scl=='linear')
     hist, bins, grid_min, grid_max = comp_hist(data, mn, mx, N_bins, lin_scl=lin_scl, dens=dens)
-    max_dens = (np.max(dens) if dens else np.max(hist) / np.sum(hist) / abs(bins[2] - bins[1]))
+    max_dens = np.max(hist)
 
     if(plot_vs_index):
         fig, ax = my.get_fig('index', y_lbl, yscl=scl)
@@ -63,65 +66,76 @@ def my_R(x, y):
     y = y - np.mean(y)
     return np.sum(np.multiply(x,y)) / np.sqrt(np.sum(x**2) * np.sum(y**2))
 
-#@jit
-def diff_S(x, data, sgm):
-    x /= sgm
+def diff_p(x, data, sgm):
     dx = abs(x[1] - x[0])
-
     #p = np.mean(scipy.stats.norm.pdf(x, data[np.newaxis].T, sgm), axis=0)
 
     x_grid, data_grid = np.meshgrid(x, data)
-    p = np.mean(np.exp(-(x_grid - data_grid)**2 / 2), axis=0) / (sqrt_2pi * sgm)       # density
+    p = np.mean(np.exp(-((x_grid - data_grid) / sgm)**2 / 2), axis=0) / (sqrt_2pi * sgm)       # density
     #p = np.mean(np.exp(-(x_grid - data_grid)**2 / 2), axis=0) * (dx / sqrt_2pi)   # prob
 
-    p[p < 2 * np.finfo(float).eps] = 1   # p*ln(p) = 0 for such p, so we can as well put p=1 to get the same 0
+    return p
 
+#@jit
+def diff_S(x, data, sgm):
+    p = diff_p(x, data, sgm)
+    p[p < 2 * np.finfo(float).eps] = 1   # p*ln(p) = 0 for such p, so we can as well put p=1 to get the same 0
     return -np.multiply(p, np.log(p))
 
 #@jit
 #def get_S(data, Nint=100):
-def get_S(data, sgm, Nint=200):
+def get_S(data, sgm, Nint=500, S_margin=3):
     N = len(data)
-    rng = max(data) - min(data)
-    #sgm = rng / N
-    sgm = min(rng / 2, sgm)
-    x1 = min(data) - 3 * sgm
-    x2 = max(data) + 3 * sgm
+    x1 = min(data) - S_margin * sgm
+    x2 = max(data) + S_margin * sgm
+    rng = x2 - x1
+    sgm = rng / N
+    #sgm = min(rng / 2, sgm)
 #    S, S_err = scipy.integrate.quad(diff_S, x1, x2, args=(data, sgm))
 
     x_draw = np.linspace(x1, x2, Nint)
     #p = np.mean(scipy.stats.norm.pdf(x_draw, data[np.newaxis].T, sgm), axis=0)
-    S = np.mean(diff_S(x_draw, data, sgm)) * rng  # density
+    S = np.trapz(diff_S(x_draw, data, sgm), x=x_draw)  # density
     #S = np.sum(diff_S(x_draw, data, sgm))          # prob
 
-    return S
+    return S - (1 + np.log(2 * np.pi * sgm**2)) / 2
 
-def draw_Rcut(all_displs, time, x, x_cut, sgm, Ndgt=5):
+def draw_Rcut(all_displs, time, x, x_cut, sgm, Ndgt=5, S_margin=3):
     ind = np.argmin(np.abs(x - x_cut))
     data = all_displs[:, ind]
     N = len(data)
     rng = max(data) - min(data)
     R, R_pvalue = scipy.stats.pearsonr(time, data)
+    D, _, _, _ = scipy.linalg.lstsq(time[:, np.newaxis], data[:, np.newaxis])
+    D /= 6
+    log_D = np.log10(D / D_bulk[T])
 
-    fig, ax = my.get_fig('$t$ (ns)', '$\sqrt{r^2}$ ($nm$)', title=r'$i = ' + str(ind) + r'; R_{r^2} \approx ' + my.f2str(R, Ndgt) + '$')
-    ax.plot(time, np.sqrt(data))
+    #fig, ax = my.get_fig('$t$ (ns)', '$\sqrt{r^2}$ ($nm$)', title=r'$i = ' + str(ind) + r'; R_{r^2} \approx ' + my.f2str(R, Ndgt) + '$')
+    fig, ax = my.get_fig('$t$ (ns)', '$r^2$ ($nm^2$)', title=r'$i = ' + str(ind) + r'; logD = ' + my.f2str(log_D, Ndgt) + '$')
+    #ax.plot(time, np.sqrt(data))
+    ax.plot(time, data)
+    ax.plot([0, max(time)], [0, 6*D*max(time)])
     #ax.plot(time, data)
 
     #sgm = rng / N
     N_draw = 1000
-    x_draw = np.linspace(min(data) - 3*sgm, max(data) + 3*sgm, N_draw)
-    distr = np.mean(scipy.stats.norm.pdf(x_draw, data[np.newaxis].T, sgm), axis=0)
+    x_draw = np.linspace(min(data) - S_margin*sgm, max(data) + S_margin*sgm, N_draw)
+    #distr = np.mean(scipy.stats.norm.pdf(x_draw, data[np.newaxis].T, sgm), axis=0)
     #S, S_err = scipy.integrate.quad(diff_S, min(x_draw), max(x_draw), args=(data, sgm))
-    S = get_S(data, sgm)
+    distr = diff_p(x_draw, data, sgm)
+    S = get_S(data, sgm, S_margin=S_margin, Nint=N_draw)
 
     fig, ax = my.get_fig('$r^2$', 'n', title=r'$i = ' + str(ind) + r'; S \approx ' + my.f2str(S, Ndgt) + '$')
     ax.plot(x_draw, distr)
 
-def clustering_2D(x, y, x_lbl, y_lbl, n_comp=2, gauss_cut=1, N_X_grid=300, N_Y_grid=300, verbose=False):
-    ax = None
+def clustering_2D(x, y, x_lbl, y_lbl, n_comp=2, gauss_cut=1, N_X_grid=300, N_Y_grid=300, verbose=False, title=None):
+    if(verbose):
+        fig, ax = my.get_fig(x_lbl, y_lbl, title=title)
+    else:
+        ax = None
+
     if(n_comp == 1):
         if(verbose):
-            fig, ax = my.get_fig(x_lbl, y_lbl)
             ax.scatter(x, y, s=1)
         return ax
     else:
@@ -143,10 +157,10 @@ def clustering_2D(x, y, x_lbl, y_lbl, n_comp=2, gauss_cut=1, N_X_grid=300, N_Y_g
         for i in range(N_water):
             v = X_train[i, :] - free_water_mean
             gauss_dists[i] = np.dot(v, np.dot(inv_cov, v))
-        free_water_inds = (gauss_dists < gauss_cut) & free_water_labels
+        #free_water_inds = (gauss_dists < gauss_cut) & free_water_labels
+        free_water_inds = (gauss_dists < gauss_cut)
         
         if(verbose):
-            fig, ax = my.get_fig(x_lbl, y_lbl)
             X, Y = np.meshgrid(np.linspace(min(x), max(x), N_X_grid), np.linspace(min(y), max(y), N_Y_grid))
             XX = np.array([X.ravel(), Y.ravel()]).T
             Z = -clasifier.score_samples(XX)
@@ -219,6 +233,7 @@ r2_min = 7e0
 r2_max = 1e3
 R_cut = 0.75
 S_cut = 0.5
+S_margin = 3
 
 # ============== arg parse ==========================
 supercell_str = ''.join([str(x) for x in supercell])
@@ -246,6 +261,7 @@ model_path = os.path.join(run_path, model_name)
 traj_filepath = os.path.join(model_path, traj_filename)
 topol_filepath = os.path.join(model_path, topol_filename)
 init_pdb_filepath = os.path.join(model_path, initial_pdb_filename)
+mobility_filepath = os.path.join(model_path, 'mob_time' + my.f2str(time_cut) + '_sgm' + my.f2str(sgm) + '.dat')
 R_filename = os.path.join(model_path, 'R_time' + my.f2str(time_cut) + '.npy')
 D_filename = os.path.join(model_path, 'D_time' + my.f2str(time_cut) + '.npy')
 Ddyn_filename = os.path.join(model_path, 'Ddyn_W' + my.f2str(D_timewindow) + '_s' + my.f2str(D_timestep) + '.npy')
@@ -268,7 +284,7 @@ if(recomp):
     N_frames = traj.xyz.shape[0]
     N_atoms = traj.xyz.shape[1]
     time = np.arange(0, N_frames) * Dt
-    w_crd = traj.xyz[:, top.select('water'), :]
+    w_crd = traj.xyz[:, top.select('water and name O'), :]
     N_water = w_crd.shape[1]
     if(verbose):
         print('traj shape: ', traj.xyz.shape)
@@ -305,10 +321,10 @@ if(recomp):
         linfit, _, _, _ = scipy.linalg.lstsq(time[:, np.newaxis], all_displs[:, i][:, np.newaxis])
         D[i] = linfit / 6
         #R[i], R_pvalue[i] = scipy.stats.pearsonr(time, all_displs[:, i])
-        #R[i] = my_R(time, all_displs[:, i])
+        R[i] = my_R(time, all_displs[:, i])
         #I2[i] = np.log(np.sum(all_displs[:, i]**2) / (N_frames * r2_range[i]**2 / 3))
         #I4[i] = np.log(np.sum(all_displs[:, i]**4) / (N_frames * r2_range[i]**4 / 5))
-        #S[i] = get_S(all_displs[:, i], sgm)
+        S[i] = get_S(all_displs[:, i], sgm)
 
         #for j in np.arange(N_D_dyn):
         #    displ = (w_crd[j * D_timestep + timewindow_ind, i, :] - w_crd[j * D_timestep, i, :])**2
@@ -332,8 +348,8 @@ if(recomp):
         np.save(f, all_displs)
     with open(wcrd_filename, 'wb') as f:
         np.save(f, w_crd)
-#    with open(Ddyn_filename, 'wb') as f:
-#        np.save(f, D_dyn)
+    with open(Ddyn_filename, 'wb') as f:
+        np.save(f, D_dyn)
 
 else:
     with open(R_filename, 'rb') as f:
@@ -357,27 +373,54 @@ else:
     N_D_dyn = D_dyn.shape[0]
     #N_water = D_dyn.shape[1]
 
-    D_grid = np.empty((N_D_dyn, N_bins))
-    time_grid = np.empty((N_D_dyn, N_bins))
-    hist_grid = np.empty((N_D_dyn, N_bins))
-    for i in range(N_D_dyn):
-        time_grid[i, :] = time[i]
-        hist_grid[i, :], bins, grid_min, grid_max = comp_hist(D_dyn[i, :], -1, 1e10, N_bins)
-        D_grid[i, :] = (bins[1:] + bins[:-1]) / 2
-        hist_grid[i, :] /= np.sum(hist_grid[i, :]) * abs(bins[2] - bins[1])
+    #D_grid = np.empty((N_D_dyn, N_bins))
+    #time_grid = np.empty((N_D_dyn, N_bins))
+    #hist_grid = np.empty((N_D_dyn, N_bins))
+    #for i in range(N_D_dyn):
+#        time_grid[i, :] = time[i]
+#        hist_grid[i, :], bins, grid_min, grid_max = comp_hist(D_dyn[i, :], -1, 1e10, N_bins)
+#        D_grid[i, :] = (bins[1:] + bins[:-1]) / 2
+#        hist_grid[i, :] /= np.sum(hist_grid[i, :]) * abs(bins[2] - bins[1])
 
-        if(verbose):
-            print('postproc done: ' + my.f2str((i+1)/N_D_dyn * 100) + ' %      \r', end='')
+#        if(verbose):
+#            print('postproc done: ' + my.f2str((i+1)/N_D_dyn * 100) + ' %      \r', end='')
     
+init_traj = mdt.load(traj_filepath, 0, top=init_pdb_filepath)
+init_top = init_traj.topology
+water_O_inds = init_top.select('water and name O')
+
 #R_min_ind = np.argmin(R)
 #R_max_ind = np.argmax(R)
-#S_min_ind = np.argmin(S)
-#S_max_ind = np.argmax(S)
+S_min_ind = np.argmin(S)
+S_max_ind = np.argmax(S)
 #I2_max_ind = np.argmax(I2)
+log_D = np.log10(D / D_bulk[T])
 
-#SR_inds, [S_mean, R_mean], ax_SR = clustering_2D(S, R, '$S$', '$R$', gauss_cut=gauss_cut, verbose=verbose)
-#ax_SD = clustering_2D(S, D, '$S$', '$D$', gauss_cut=gauss_cut, verbose=verbose, n_comp=1)
-#ax_Sr = clustering_2D(S, np.sqrt(max_displ), '$S$', '$r_{max}$', gauss_cut=gauss_cut, verbose=verbose, n_comp=1)
+if(verbose):
+    SR_inds, [S_mean, R_mean], ax_SR = clustering_2D(S, R, '$S$', '$R$', gauss_cut=gauss_cut, verbose=verbose, title='$R(S)$')
+    clustering_2D(S, R, '$S$', '$R$', gauss_cut=gauss_cut, verbose=verbose, title='$R(S)$', n_comp=1)
+    clustering_2D(S, D, '$S$', '$D$', gauss_cut=gauss_cut, verbose=verbose, n_comp=1, title='$D(S)$')
+    clustering_2D(S, log_D, '$S$', '$log_{10}(D/D_{bulk})$', gauss_cut=gauss_cut, verbose=verbose, n_comp=1, title='$D(S)$')
+    clustering_2D(np.log10(S), log_D, '$log_{10}(S)$', '$log_{10}(D/D_{bulk})$', gauss_cut=gauss_cut, verbose=verbose, n_comp=1, title='$D(S)$')
+    #ax_Sr = clustering_2D(S, np.sqrt(max_displ), '$S$', '$r_{max}$', gauss_cut=gauss_cut, verbose=verbose, n_comp=1)
+
+S_R_mob = unitize(S) + unitize(R)
+S_D_mob = unitize(S) + unitize(D)
+S_logD_mob = unitize(S) + unitize(log_D)
+
+np.savetxt(mobility_filepath, \
+           np.concatenate((water_O_inds[:, np.newaxis], S_R_mob[:, np.newaxis], S_D_mob[:, np.newaxis], S_logD_mob[:, np.newaxis]), axis=1), \
+           fmt=('%i', '%1.4e', '%1.4e', '%1.4e'))
+
+if(verbose):
+    fig1, ax1 = my.get_fig('$SR$', '$SD$')
+    ax1.scatter(S_R_mob, S_D_mob)
+
+    fig2, ax2 = my.get_fig('$SR$', '$S-lgD$')
+    ax2.scatter(S_R_mob, S_logD_mob)
+
+    fig3, ax3 = my.get_fig('$S-lgD$', '$SD$')
+    ax3.scatter(S_logD_mob, S_D_mob)
 
 #N_SR_cut = np.sum((R > R_cut) & (S > S_cut))
 #N_SR_clust = np.sum(SR_inds)
@@ -389,13 +432,13 @@ else:
 #    print(N_SR_cut, N_SR_clust, N_water, S_mean, R_mean)
     #print(N_SR_clust / N_water)
 
-D_hist, D_bins, grid_min, grid_max = comp_hist(D, -1, D_bulk[T], N_bins, dens=True)
-dens = D_hist
-max_ind = np.argmax(dens)
-D_hist_x = (D_bins[1:] + D_bins[:-1]) / 2
-D_cr = D_hist_x[max_ind + np.argmin(np.abs(dens[max_ind : ] - 0.5))]
-#print(T, ' : ', D_cr)
-print(D_cr)
+#D_hist, D_bins, grid_min, grid_max = comp_hist(D, -1, D_bulk[T], N_bins, dens=False)
+#dens = D_hist
+#max_ind = np.argmax(dens)
+#D_hist_x = (D_bins[1:] + D_bins[:-1]) / 2
+#D_cr = D_hist_x[max_ind + np.argmin(np.abs(dens[max_ind : ] - 0.5))]
+#D_cr = np.sort(D)[int(len(D) * 0.9)]
+#print(D_cr)
 
 if(verbose):
     #fig_relD, ax_relD = my.get_fig('$time (ns)$', '$D/D_0$', yscl='linear')
@@ -410,21 +453,23 @@ if(verbose):
 #    fig_Ddyn.colorbar(D_hist_surf)
 
     if(draw_hists):
+        pass
         #r2_hist, r2_bins = make_hist(max_displ, r2_min, r2_max, N_bins, scl='log', y_lbl='$r_{final}^2$ ($nm^2$)')
-        D_hist, D_bins, D_ax = make_hist(D, -1, D_bulk[T], N_bins, scl='linear', dens=True, \
-                                   y_lbl='$D$ ($nm^2/ns$)', \
-                                   title='$T = ' + my.f2str(T) + '$ $(C^{\circ}); D_{bulk} = ' + my.f2str(D_bulk[T]) + '$ $(nm^2/ns$)')
+        #D_hist, D_bins, D_ax = make_hist(D, -1, D_bulk[T], N_bins, scl='linear', dens=False, \
+        #                           y_lbl='$D$ ($nm^2/ns$)', \
+        #                           title='$T = ' + my.f2str(T) + '$ $(C^{\circ}); D_{bulk} = ' + my.f2str(D_bulk[T]) + '$ $(nm^2/ns$)')
         #R_hist, R_bins = make_hist(R, -2, 2, N_bins, scl='linear', y_lbl='R')
         #R_hist_cut, R_bins_cut = make_hist(R, R_cut, 2, N_bins, scl='linear', y_lbl='R')
+        Dlog_hist, Dlog_bins, Dlog_ax = make_hist(log_D, -6, 0, N_bins, y_lbl='$log_{10}(D/D_{bulk})$', dens=True)
 
-        D_ax.plot([D_cr, D_cr], [0, max(dens)], c='red')
+        #D_ax.plot([D_cr, D_cr], [0, max(D_hist)], c='red')
     
         #fig_I, ax_I = my.get_fig('$I_2$', '$I_4$')
         #ax_I.scatter(I2, I4, s=4)
         #I2_hist, I2_bins = make_hist(I2, -20, 20, 100, scl='linear', y_lbl='$I_2$')
         #I4_hist, I4_bins = make_hist(I4, -20, 20, 100, scl='linear', y_lbl='$I_4$')
     
-        #S_hist, S_bins = make_hist(S, -20, 20, 100, scl='linear', y_lbl='$S$')
+        S_hist, S_bins, S_ax = make_hist(S, -20, 20, N_bins, y_lbl='$S$', dens=True)
 
 #        ax_SR.plot([S_cut, S_cut], [min(R), max(R)], c='red')
 #        ax_SR.plot([min(S), max(S)], [R_cut, R_cut], c='red')
@@ -449,7 +494,7 @@ if(verbose):
         #ax_minS.plot(time, np.sqrt(all_displs[:, S_max_ind]))
 
         draw_Rcut(all_displs, time, S, S[S_max_ind], sgm)
-        draw_Rcut(all_displs, time, R, R_cut, sgm)
+        draw_Rcut(all_displs, time, D, D_cut, sgm)
         draw_Rcut(all_displs, time, S, S_cut, sgm)
     
     if(draw_Rcuts):
@@ -457,6 +502,7 @@ if(verbose):
         y_lbl = '$r^2$ ($nm^2$)'
         x_lbl = '$t$ (ns)'
         for r_cut in draw_Rcuts:
-            draw_Rcut(all_displs, time, R, r_cut, sgm)
+            #draw_Rcut(all_displs, time, log_D, r_cut, sgm)
+            draw_Rcut(all_displs, time, S, r_cut, sgm)
 
     plt.show()
