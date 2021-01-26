@@ -18,8 +18,11 @@ import mdtraj as mdt
 
 sqrt_2pi = np.sqrt(2 * np.pi)
 
-def unitize(x):
+def stdize(x):
     return (x - np.mean(x)) / np.std(x)
+
+def unitize(x):
+	return (x - np.min(x)) / (np.max(x) - np.min(x))
 
 def files_exist(filenames):
     for f_name in filenames:
@@ -40,24 +43,27 @@ def comp_hist(data, mn, mx, N_bins, lin_scl=True, dens=False):
 
     return hist, bins, grid_min, grid_max
 
-def make_hist(data, mn, mx, N_bins, y_lbl='y', scl='linear', title=None, plot_vs_index=False, dens=False):
+def make_hist(data, mn, mx, N_bins, y_lbl='y', scl='linear', title=None, plot_vs_index=False, dens=False, draw=True):
     lin_scl = (scl=='linear')
     hist, bins, grid_min, grid_max = comp_hist(data, mn, mx, N_bins, lin_scl=lin_scl, dens=dens)
     max_dens = np.max(hist)
 
-    if(plot_vs_index):
-        fig, ax = my.get_fig('index', y_lbl, yscl=scl)
-        ax.plot(np.arange(len(data)), data, '.')
-
-    if(title is None):
-        title = '$p(' + y_lbl + ')$'
-    fig_hist, ax_hist = my.get_fig(y_lbl, '$p_{dens}$', xscl=scl, title=title)
-    plt_hist, plt_bins, _ = ax_hist.hist(data, bins=bins, density=dens)
-
-    if(grid_min < mn):
-        ax_hist.plot([mn, mn], [0, max_dens], c='red')
-    if(grid_min > mx):
-        ax_hist.plot([mx, mx], [0, max_dens], c='red')
+    if(draw):
+        if(plot_vs_index):
+            fig, ax = my.get_fig('index', y_lbl, yscl=scl)
+            ax.plot(np.arange(len(data)), data, '.')
+    
+        if(title is None):
+            title = '$p(' + y_lbl + ')$'
+        fig_hist, ax_hist = my.get_fig(y_lbl, '$p_{dens}$', xscl=scl, title=title)
+        plt_hist, plt_bins, _ = ax_hist.hist(data, bins=bins, density=dens)
+    
+        if(grid_min < mn):
+            ax_hist.plot([mn, mn], [0, max_dens], c='red')
+        if(grid_min > mx):
+            ax_hist.plot([mx, mx], [0, max_dens], c='red')
+    else:
+        ax_hist = None
 
     return hist, bins, ax_hist
 
@@ -228,6 +234,7 @@ supercell = np.array([1, 1, 2], dtype=np.intc)
 traj_filename = 'npt_nojump.xtc'
 topol_filename = 'topol.top'
 initial_pdb_filename = 'initial_npt.pdb'
+gmx_exe_name = 'gmx_mpi'
 
 r2_min = 7e0
 r2_max = 1e3
@@ -261,23 +268,27 @@ model_path = os.path.join(run_path, model_name)
 traj_filepath = os.path.join(model_path, traj_filename)
 topol_filepath = os.path.join(model_path, topol_filename)
 init_pdb_filepath = os.path.join(model_path, initial_pdb_filename)
-mobility_filepath = os.path.join(model_path, 'mob_time' + my.f2str(time_cut) + '_sgm' + my.f2str(sgm) + '.dat')
+mobility_S_R_filepath = os.path.join(model_path, 'mob_S_R_time' + my.f2str(time_cut) + '_sgm' + my.f2str(sgm) + '.chc')
+mobility_S_D_filepath = os.path.join(model_path, 'mob_S_D_time' + my.f2str(time_cut) + '_sgm' + my.f2str(sgm) + '.chc')
+mobility_S_logD_filepath = os.path.join(model_path, 'mob_S_logD_time' + my.f2str(time_cut) + '_sgm' + my.f2str(sgm) + '.chc')
+select_water_filepath = os.path.join(model_path, 'water_inds.chc')
 R_filename = os.path.join(model_path, 'R_time' + my.f2str(time_cut) + '.npy')
 D_filename = os.path.join(model_path, 'D_time' + my.f2str(time_cut) + '.npy')
 Ddyn_filename = os.path.join(model_path, 'Ddyn_W' + my.f2str(D_timewindow) + '_s' + my.f2str(D_timestep) + '.npy')
 S_filename = os.path.join(model_path, 'S_time' + my.f2str(time_cut) + '_sgm' + my.f2str(sgm) + '.npy')
 displs_filename = os.path.join(model_path, 'displs_time' + my.f2str(time_cut) + '.npy')
 maxdispl_filename = os.path.join(model_path, 'maxdispl_time' + my.f2str(time_cut) + '.npy')
+displ_ind_filename = os.path.join(model_path, 'displ_ind.npy')
 wcrd_filename = os.path.join(model_path, 'water_coord.npy')
 data_files = [R_filename, S_filename, D_filename, maxdispl_filename, displs_filename, wcrd_filename, Ddyn_filename]
 recomp = recomp or not files_exist(data_files)
 if(recomp):
     if(not os.path.isfile(init_pdb_filepath)):
         os.chdir(model_path)
-        my.run_it('gmx_mpi trjconv -s npt.gro -f npt.xtc -skip 1000000000 -o ' + initial_pdb_filename + ' < output_whole_sys0.in')
+        my.run_it(gmx_exe_name + ' trjconv -s npt.gro -f npt.xtc -skip 1000000000 -o ' + initial_pdb_filename + ' < output_whole_sys0.in')
     if(not os.path.isfile(traj_filepath)):
         os.chdir(model_path)
-        my.run_it('gmx_mpi trjconv -s npt.gro -f npt.xtc -pbc nojump -o ' + traj_filename + ' < output_whole_sys0.in')
+        my.run_it(gmx_exe_name + ' trjconv -s npt.gro -f npt.xtc -pbc nojump -o ' + traj_filename + ' < output_whole_sys0.in')
     
     traj = mdt.load(traj_filepath, top=init_pdb_filepath)
     top = traj.topology
@@ -348,8 +359,10 @@ if(recomp):
         np.save(f, all_displs)
     with open(wcrd_filename, 'wb') as f:
         np.save(f, w_crd)
-    with open(Ddyn_filename, 'wb') as f:
-        np.save(f, D_dyn)
+    #with open(Ddyn_filename, 'wb') as f:
+    #    np.save(f, D_dyn)
+    with open(displ_ind_filename, 'wb') as f:
+        np.save(f, displ_ind)
 
 else:
     with open(R_filename, 'rb') as f:
@@ -366,6 +379,9 @@ else:
         w_crd = np.load(f)
     with open(Ddyn_filename, 'rb') as f:
         D_dyn = np.load(f)
+    with open(displ_ind_filename, 'rb') as f:
+        displ_ind = np.load(f)
+
     N_water = len(R)
     N_frames = all_displs.shape[0]
     start_time_ind = np.ceil(time_cut / Dt)
@@ -387,7 +403,7 @@ else:
     
 init_traj = mdt.load(traj_filepath, 0, top=init_pdb_filepath)
 init_top = init_traj.topology
-water_O_inds = init_top.select('water and name O')
+water_O_inds = init_top.select('water and name O')[displ_ind]
 
 #R_min_ind = np.argmin(R)
 #R_max_ind = np.argmax(R)
@@ -396,31 +412,32 @@ S_max_ind = np.argmax(S)
 #I2_max_ind = np.argmax(I2)
 log_D = np.log10(D / D_bulk[T])
 
-if(verbose):
-    SR_inds, [S_mean, R_mean], ax_SR = clustering_2D(S, R, '$S$', '$R$', gauss_cut=gauss_cut, verbose=verbose, title='$R(S)$')
-    clustering_2D(S, R, '$S$', '$R$', gauss_cut=gauss_cut, verbose=verbose, title='$R(S)$', n_comp=1)
-    clustering_2D(S, D, '$S$', '$D$', gauss_cut=gauss_cut, verbose=verbose, n_comp=1, title='$D(S)$')
-    clustering_2D(S, log_D, '$S$', '$log_{10}(D/D_{bulk})$', gauss_cut=gauss_cut, verbose=verbose, n_comp=1, title='$D(S)$')
-    clustering_2D(np.log10(S), log_D, '$log_{10}(S)$', '$log_{10}(D/D_{bulk})$', gauss_cut=gauss_cut, verbose=verbose, n_comp=1, title='$D(S)$')
-    #ax_Sr = clustering_2D(S, np.sqrt(max_displ), '$S$', '$r_{max}$', gauss_cut=gauss_cut, verbose=verbose, n_comp=1)
+def color_from_mob(filepath, inds, x, y, N_bins=100, max_vdw=2.3, min_vdw=0.8, vdw_k=10):
+    N = len(x);
+    mob = unitize(stdize(x) + stdize(y));
+    mob_sort_inds = np.argsort(mob)
+    mob = mob[mob_sort_inds]    
+    mob_hist, mob_bins, mob_ax = make_hist(mob, -2, 2, N_bins, y_lbl='$mob$', dens=False, title=os.path.split(filepath)[1], draw=True)
+        
+    mob_bins = (mob_bins[1:] + mob_bins[:-1]) / 2
+    #vdw_rads = np.minimum(min_vdw + vdw_k * np.abs(mob - np.mean(mob))**2, max_vdw)
+    vdw_rads = (np.max(mob_hist) / mob_hist[np.intc(np.floor(mob / abs(mob_bins[2] - mob_bins[1])))]) * min_vdw
+    vdw_rads = np.minimum(vdw_rads, max_vdw)
+    inds = inds[mob_sort_inds]
+    rgb_colors = colormaps.cool(mob)
+    hex_colors = [matplotlib.colors.to_hex(c) for c in rgb_colors]
+    
+    with open(filepath, 'w') as f:
+        #f.write('select :SOL@OW;\ncolor red sel;\nrepr sphere sel;\nvdwdefine 0.8 sel;\n~show sel;\n~select sel;\n\n')
+        for i in range(N):
+            ser_str = '@/serialNumber=' + str(inds[i])
+            f.write('repr sphere %s;\nvdwdefine %f %s;\ncolor %s %s;\ndisplay %s;\n\n' % (ser_str, vdw_rads[i], ser_str, hex_colors[i], ser_str, ser_str))
+    
+    return 
 
-S_R_mob = unitize(S) + unitize(R)
-S_D_mob = unitize(S) + unitize(D)
-S_logD_mob = unitize(S) + unitize(log_D)
-
-np.savetxt(mobility_filepath, \
-           np.concatenate((water_O_inds[:, np.newaxis], S_R_mob[:, np.newaxis], S_D_mob[:, np.newaxis], S_logD_mob[:, np.newaxis]), axis=1), \
-           fmt=('%i', '%1.4e', '%1.4e', '%1.4e'))
-
-if(verbose):
-    fig1, ax1 = my.get_fig('$SR$', '$SD$')
-    ax1.scatter(S_R_mob, S_D_mob)
-
-    fig2, ax2 = my.get_fig('$SR$', '$S-lgD$')
-    ax2.scatter(S_R_mob, S_logD_mob)
-
-    fig3, ax3 = my.get_fig('$S-lgD$', '$SD$')
-    ax3.scatter(S_logD_mob, S_D_mob)
+color_from_mob(mobility_S_R_filepath, water_O_inds, S, R, N_bins)
+color_from_mob(mobility_S_D_filepath, water_O_inds, S, D, N_bins)
+color_from_mob(mobility_S_logD_filepath, water_O_inds, S, log_D, N_bins)
 
 #N_SR_cut = np.sum((R > R_cut) & (S > S_cut))
 #N_SR_clust = np.sum(SR_inds)
@@ -441,6 +458,22 @@ if(verbose):
 #print(D_cr)
 
 if(verbose):
+    SR_inds, [S_mean, R_mean], ax_SR = clustering_2D(S, R, '$S$', '$R$', gauss_cut=gauss_cut, verbose=verbose, title='$R(S)$')
+    clustering_2D(S, R, '$S$', '$R$', gauss_cut=gauss_cut, verbose=verbose, title='$R(S)$', n_comp=1)
+    clustering_2D(S, D, '$S$', '$D$', gauss_cut=gauss_cut, verbose=verbose, n_comp=1, title='$D(S)$')
+    clustering_2D(S, log_D, '$S$', '$log_{10}(D/D_{bulk})$', gauss_cut=gauss_cut, verbose=verbose, n_comp=1, title='$D(S)$')
+    clustering_2D(np.log10(S), log_D, '$log_{10}(S)$', '$log_{10}(D/D_{bulk})$', gauss_cut=gauss_cut, verbose=verbose, n_comp=1, title='$D(S)$')
+    #ax_Sr = clustering_2D(S, np.sqrt(max_displ), '$S$', '$r_{max}$', gauss_cut=gauss_cut, verbose=verbose, n_comp=1)
+    
+    fig1, ax1 = my.get_fig('$SR$', '$SD$')
+    ax1.scatter(S_R_mob, S_D_mob)
+
+    fig2, ax2 = my.get_fig('$SR$', '$S-lgD$')
+    ax2.scatter(S_R_mob, S_logD_mob)
+
+    fig3, ax3 = my.get_fig('$S-lgD$', '$SD$')
+    ax3.scatter(S_logD_mob, S_D_mob)
+
     #fig_relD, ax_relD = my.get_fig('$time (ns)$', '$D/D_0$', yscl='linear')
     #fig_relD, ax_relD = my.get_fig('$time (ns)$', '$log_{10}(D/D_0)$')
     #for i in range(N_bins, N_bins+1):
@@ -505,4 +538,5 @@ if(verbose):
             #draw_Rcut(all_displs, time, log_D, r_cut, sgm)
             draw_Rcut(all_displs, time, S, r_cut, sgm)
 
-    plt.show()
+plt.show()
+print('ALL DONE')
