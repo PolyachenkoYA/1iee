@@ -117,8 +117,8 @@ def proc_series(data, cut_time, time, xlbl='time (ns)', ylbl='', yk=1, title='',
         fig, ax = my.get_fig(xlbl, ylbl, title=title)
         ax.plot([min(time), max(time)], [avrg] * 2, '--', label=(r'mean = $' + my.f2str(avrg) + ' \pm ' + my.f2str(std) + r'$'), color='green')
         ax.plot([cut_time] * 2, [min(data), max(data)], label=('stab time = ' + my.f2str(cut_time)), color='red')
-        ax.plot(time[inds], data[inds], '.', label='used data', color='black')
-        ax.plot(time[~inds], data[~inds], '--', label='relax', color='black')
+        ax.plot(time[inds], data[inds], '.', label='used data', color='black', markersize=3)
+        ax.plot(time[~inds], data[~inds], '.', label='relax', color='black', markersize=1)
         ax.legend()
 
     return filt_data * yk, avrg * yk, std * yk, dlt * yk, N
@@ -126,7 +126,8 @@ def proc_series(data, cut_time, time, xlbl='time (ns)', ylbl='', yk=1, title='',
 #def proc_fluct_model(P_tau, compr, time, model_id=0, temp=35.0, cut_time=5, draw_T=False, draw_P=False, draw_V=False, draw_rho=False):
 def proc_fluct_model(temp, model_id=0, cut_time=5, draw_T=False, draw_P=False, draw_V=False, draw_rho=False, gromacs_provided=False):
     #model_name = 'flucts_Ptau' + my.f2str(P_tau) + '_compr' + my.f2str(compr) + '_time' + my.f2str(time) + '_' + str(model_id)
-    model_name = 'flucts_temp' + my.f2str(temp) + '_' + str(model_id)
+    #model_name = 'flucts_temp' + my.f2str(temp) + '_' + str(model_id)
+    model_name = 'watercube_T' + my.f2str(temp)
     model_path = os.path.join(run_path, model_name)
     filepath = os.path.join(model_path, npt_filename)
     cptsave_filepath = filepath + '_prev.cpt'
@@ -144,10 +145,10 @@ def proc_fluct_model(temp, model_id=0, cut_time=5, draw_T=False, draw_P=False, d
     title = 'Temp = ' + my.f2str(temp)
     Ptau_to_draw = 512
     compr_to_draw = 3e-4
-    T_cut, T_mean, T_std, d_T, N_cut = proc_series(xvg_file.array[1], cut_time, time, ylbl='T (K)', title=title, to_draw=(draw_T))
-    P_cut, P_mean, P_std, d_P, _ = proc_series(xvg_file.array[2] * 1e5, cut_time, time, yk=1e5, ylbl='P (atm)', title=title, to_draw=(draw_P))
-    V_cut, V_mean, V_std, d_V, _ = proc_series(xvg_file.array[3] * 1e-27, cut_time, time, yk=1e-27, ylbl=r'V ($nm^3$)', title=title, to_draw=(draw_V))
-    rho_cut, rho_mean, rho_std, d_rho, _ = proc_series(xvg_file.array[4], cut_time, time, yk=1000, ylbl=r'$\rho (g/cm^3)$', title=title, to_draw=(draw_rho))
+    T_cut, T_mean, T_std, d_T, N_cut = proc_series(xvg_file.array[2], cut_time, time, ylbl='T (K)', title=title, to_draw=(draw_T))
+    P_cut, P_mean, P_std, d_P, _ = proc_series(xvg_file.array[3] * 1e5, cut_time, time, yk=1e5, ylbl='P (atm)', title=title, to_draw=(draw_P))
+    V_cut, V_mean, V_std, d_V, _ = proc_series(xvg_file.array[4] * 1e-27, cut_time, time, yk=1e-27, ylbl=r'V ($nm^3$)', title=title, to_draw=(draw_V))
+    rho_cut, rho_mean, rho_std, d_rho, _ = proc_series(xvg_file.array[5], cut_time, time, yk=1000, ylbl=r'$\rho (g/cm^3)$', title=title, to_draw=(draw_rho))
     
     gro_filepath = filepath + '.gro'
     box_sizes_line = read_last_line(gro_filepath)
@@ -185,50 +186,63 @@ T_C2K = 273.15
 dt = 2e-6    # 1 fs = 1e-6 ns
 equil_maxsol_poly = [-2.9516, 1117.2]   # maxsol = np.polyval(equil_maxsol_poly, T), [T] = C (not K)
 temps = np.array([0.1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
+temps = np.array([30.0])
 P_taus = np.array([200, 400, 800, 1600, 3200, 6400])
 P_taus = np.array([200, 400, 800, 1600, 3200, 6400, 12800, 25000, 50000, 100000, 200000, 400000, 800000, 1600000, 3200000, 6400000])
 P_taus = np.array([4, 8, 16, 32, 64, 128, 256, 512])
 comprs = np.array([2e-4, 3e-4, 4e-4])
 comprs = np.array([3e-4])
 times = np.array([20.0, 40.0])
-stab_time = 5
+stab_time = 0.5
 
 # ================ K(T) ===================
 draw_all = False
 draw_T = False or draw_all
 draw_P = False or draw_all
-draw_V = False or draw_all
+draw_V = True or draw_all
 draw_rho = False or draw_all
+
+do_flucts = True
+do_dV = False
 
 use_gmx_K = True
 N_temps = len(temps)
-fl_K = np.empty(N_temps)
-fl_d_K = np.empty(N_temps)
-fl_K_gmx = np.empty(N_temps)
-dV_K = np.empty(N_temps)
-dV_d_K = np.empty(N_temps)
-
-for temp_i, temp in enumerate(temps):
-    dV_K[temp_i], dV_d_K[temp_i] = \
-        proc_dV_model(temp, model_id=0, cut_time_0=stab_time, cut_time_1=stab_time, to_draw=draw_all)
-
-    fl_K[temp_i], fl_d_K[temp_i], fl_K_gmx[temp_i] = \
-        proc_fluct_model(temp, model_id=0, cut_time=stab_time, gromacs_provided=use_gmx_K, \
-                  draw_T=draw_T, draw_P=draw_P, draw_V=draw_V, draw_rho=draw_rho)
-
-print('flucts:')
-print(fl_K_gmx)
-print(fl_K)
-print(fl_d_K / fl_K)
-print('\ndV:')
-print(dV_K)
-print(dV_K / dV_d_K)
 
 units = 1e6
 fig, ax = my.get_fig('T (C)', 'K (MPa)', title='K(T)')
-ax.errorbar(temps, fl_K / units, yerr=fl_d_K / units, label='flucts', fmt='o', mfc='none')
-ax.errorbar(temps, dV_K / units, yerr=dV_d_K / units, label=r'$dV/V \sim 1e-2$', fmt='o', mfc='none')
-ax.set_yticks(np.arange(3500, 5001, step=500))
+
+if(do_flucts):
+    fl_K = np.empty(N_temps)
+    fl_d_K = np.empty(N_temps)
+    fl_K_gmx = np.empty(N_temps)
+
+    for temp_i, temp in enumerate(temps):
+        fl_K[temp_i], fl_d_K[temp_i], fl_K_gmx[temp_i] = \
+            proc_fluct_model(temp, model_id=0, cut_time=stab_time, gromacs_provided=use_gmx_K, \
+                      draw_T=draw_T, draw_P=draw_P, draw_V=draw_V, draw_rho=draw_rho)
+
+    print('flucts:')
+    print(fl_K_gmx)
+    print(fl_K)
+    print(fl_d_K / fl_K)
+    
+    ax.errorbar(temps, fl_K / units, yerr=fl_d_K / units, label='flucts', fmt='o', mfc='none')
+
+if(do_dV):
+    dV_K = np.empty(N_temps)
+    dV_d_K = np.empty(N_temps)
+    
+    for temp_i, temp in enumerate(temps):
+        dV_K[temp_i], dV_d_K[temp_i] = \
+            proc_dV_model(temp, model_id=0, cut_time_0=stab_time, cut_time_1=stab_time, to_draw=draw_all)
+
+    print('\ndV:')
+    print(dV_K)
+    print(dV_K / dV_d_K)
+
+    ax.errorbar(temps, dV_K / units, yerr=dV_d_K / units, label=r'$dV/V \sim 1e-3$', fmt='o', mfc='none')
+
+#ax.set_yticks(np.arange(3500, 5001, step=500))
 ax.legend()
 
 plt.show()

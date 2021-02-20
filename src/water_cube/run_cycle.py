@@ -25,13 +25,13 @@ if(argc not in [0]):
 #mainrun_mode = int(args[0])
 
 # =============== launch tasks =========
-for time_i in range(12):
+for param_i in range(12):
     for id_i, id in enumerate(range(1)):
-        #cmd = 'python run_K_flucts.py -omp ' + str(omp) + ' -mpi ' + str(mpi) + ' -do_mainrun yes -preproc_mode force -time_ids ' + str(time_i) + ' -id ' + str(id)  # fluct water_cube K
-        cmd = 'python run_K_flucts.py -omp ' + str(omp) + ' -param_ids ' + str(time_i)
-        # cmd = 'python run_K_dV.py -omp ' + str(omp) + ' -mpi ' + str(mpi) + ' -mainrun_mode ' + str(mainrun_mode) + ' -preproc_mode if_needed -time_ids ' + str(time_i) + ' -id ' + str(id) + ' -dV_mult ' + str(dV_mult)  # dV water_cube K
-        job_name = 'gromacs' + str(time_i)
-        host_i = host_ids[(id_i + time_i * 4) % len(host_ids)]
+        #cmd = 'python run_K_flucts.py -omp ' + str(omp) + ' -mpi ' + str(mpi) + ' -do_mainrun yes -preproc_mode force -time_ids ' + str(param_i) + ' -id ' + str(id)  # fluct water_cube K
+        cmd = 'python run_K_flucts.py -omp ' + str(omp) + ' -param_ids ' + str(param_i)
+        # cmd = 'python run_K_dV.py -omp ' + str(omp) + ' -mpi ' + str(mpi) + ' -mainrun_mode ' + str(mainrun_mode) + ' -preproc_mode if_needed -time_ids ' + str(param_i) + ' -id ' + str(id) + ' -dV_mult ' + str(dV_mult)  # dV water_cube K
+        job_name = 'gromacs' + str(param_i)
+        host_i = host_ids[(id_i + param_i * 4) % len(host_ids)]
         #my.run_it('sbatch --nodelist=host' + str(host_i) + ' --reservation=test -J ' + job_name  + ' -p max1n -N 1 --ntasks-per-node=' + str(mpi) + ' --gres=gpu:1 --wrap="' + cmd + '"')
         my.run_it("screen -d -m -S " + job_name + " bash -c '" + cmd + "'")
 # sbatch --reservation=test -J gromacs1 -p max1n -N 1 --ntasks-per-node=1 --gres=gpu:1 --wrap="python run.py -omp 6 -mpi 4 -do_mainrun 0 -time_ids 0"

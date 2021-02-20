@@ -29,7 +29,7 @@ exe_path=src/water_cube
 cd $root_path
 cd $run_path
 
-$gmx_serial solvate -cs tip4p -o solvated.gro -box 7.70610 7.70610 7.44460 -p topol.top
+$gmx_serial solvate -cs amber03.ff/tip4p2005.gro -o solvated.gro -box 7.70610 7.70610 7.44460 -p topol.top
 #$gmx_serial solvate -cs tip4p -o solvated.gro -box 3 3 3 -p topol.top
 
 $gmx_serial grompp -f min.mdp -c solvated.gro -p topol.top -o min.tpr

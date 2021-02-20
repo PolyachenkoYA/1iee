@@ -29,7 +29,7 @@ mdp_1_filename_base = 'nvt_bigbox'
 # ================ params =================
 
 times = [0.25, 0.5, 1.0, 2.0]
-#times = [0.1]
+times = [1.0]
 
 # ============== arg parse ====================
 N_gpus = 1
