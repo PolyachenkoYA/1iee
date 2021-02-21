@@ -95,7 +95,6 @@ for _ in range(1):
         print('Skipping')
     else:
         my.run_it('./clear_restore.sh ' + model_name)
-        my.run_it('awk \'{ gsub(/tip4p/, \"tip4p2005\"); print }\' < topol.top > tst')
         my.run_it(['python', 'change_mdp.py', '-in', mdp_filepath, '-out', mdp_filepath, '-flds', 'ref-t', str(temp + T_C2K), \
                                                                                                   'nsteps', str(nsteps), \
                                                                                                   'gen-temp', str(temp + T_C2K), \

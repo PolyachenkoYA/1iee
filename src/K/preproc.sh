@@ -39,6 +39,7 @@ fi
 root_path=$(git rev-parse --show-toplevel)
 run_path=run/$job_id
 exe_path=src/K
+topol_filename=topol.top
 cd $root_path
 cd $run_path
 
@@ -71,13 +72,15 @@ cd $run_path
 
 # ../src/exe/playmol2gmx.sh 1iee_prot.pdb 1iee_prot4gmx.pdb
 
-$gmx_serial pdb2gmx -f $start_pdb_file -o 1iee_init.gro -water tip4p -missing < protonation_gromacs.in
+$gmx_serial pdb2gmx -f $start_pdb_file -o 1iee_init.gro -missing -p $topol_filename < protonation_gromacs.in
+#mv $topol_filename topol_tip4p.top
+#awk '{ gsub(/tip4p/, "tip4p2005"); print }' < topol_tip4p.top > $topol_filename
 $gmx_serial editconf -f 1iee_init.gro -o 1iee_newbox.gro -c -box $lx $ly $lz
-$gmx_serial solvate -cp 1iee_newbox.gro -cs tip4p.gro -o 1iee_solv.gro -p topol.top -maxsol $maxsol
-$gmx_serial grompp -f ions.mdp -c 1iee_solv.gro -p topol.top -o 1iee_wions.tpr -maxwarn 5
-$gmx_serial genion -s 1iee_wions.tpr -o 1iee_wions.gro -p topol.top -pname NA -nname CL -neutral -rmin 0.2  < genion_gromacs.in
+$gmx_serial solvate -cp 1iee_newbox.gro -cs amber03w.ff/tip4p2005.gro -o 1iee_solv.gro -p $topol_filename -maxsol $maxsol
+$gmx_serial grompp -f ions.mdp -c 1iee_solv.gro -p $topol_filename -o 1iee_wions.tpr -maxwarn 5
+$gmx_serial genion -s 1iee_wions.tpr -o 1iee_wions.gro -p $topol_filename -pname NA -nname CL -neutral -rmin 0.2  < genion_gromacs.in
 
-$gmx_serial grompp -f minim.mdp -c 1iee_wions.gro -p topol.top -o em.tpr
+$gmx_serial grompp -f minim.mdp -c 1iee_wions.gro -p $topol_filename -o em.tpr
 #srun --ntasks-per-node=1 $gmx_executable mdrun -v -deffnm em -ntomp $omp -gpu_id $gpu_id -pin on
 if [ $gpu_id -eq -1 ]
 then
@@ -88,7 +91,7 @@ fi
 $gmx_serial trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
 cp em.gro eql.gro
 
-#$gmx_serial grompp -f eql.mdp -c eql.gro -p topol.top -o eql.tpr
+#$gmx_serial grompp -f eql.mdp -c eql.gro -p $topol_filename -o eql.tpr
 #if [ $gpu_id -eq -1 ]
 #then
 #        $gmx_mdrun mdrun -v -deffnm eql -ntomp $omp
