@@ -34,9 +34,9 @@ if(argc not in [0]):
 
 # ================ water anal ===================
 
-for t in temp:
-    cmd = 'python water_mobility.py -temp ' + str(t) + ' -recomp 1 -verbose 0'
-    my.run_it("screen -d -m -S temp" + str(t) + " bash -c '" + cmd + "'")
+#for t in temp:
+#    cmd = 'python water_mobility.py -temp ' + str(t) + ' -recomp 1 -verbose 0'
+#    my.run_it("screen -d -m -S temp" + str(t) + " bash -c '" + cmd + "'")
     #my.run_it(cmd, verbose=False)
     #my.run_it('python water_mobility.py -temp ' + str(t) + ' -verbose 1 -D_timewindow ' + str(tw) + ' -D_timestep 1', verbose=False)
 #for g in gauss_dists:
