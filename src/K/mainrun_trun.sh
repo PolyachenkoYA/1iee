@@ -1,13 +1,12 @@
 #!/bin/bash
 
 set -e
-gmx_serial=gmx_serial
-gmx_serial=gmx_ser_gpu
 gmx_serial=gmx_mpi
+gmx_serial=gmx_ser_newhead
 
 gmx_mdrun=gmx_mpi
-gmx_mdrun=gmx_angara
-gmx_mdrun="$gmx_serial"
+#gmx_mdrun=gmx_angara
+#gmx_mdrun="$gmx_serial"
 
 argc=$#
 if [ $argc -ne 5 ]

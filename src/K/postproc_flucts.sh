@@ -2,11 +2,11 @@
 
 set -e
 gmx_serial=gmx_mpi
-#gmx_serial=gmx_ser_gpu
+gmx_serial=gmx_ser_newhead
 
 gmx_mdrun=gmx_mpi
-gmx_mdrun=gmx_angara
-gmx_mdrun=$gmx_serial
+#gmx_mdrun=gmx_angara
+#gmx_mdrun=$gmx_serial
 
 npt_summary_filename=npt_summary.txt
 
