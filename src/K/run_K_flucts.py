@@ -99,8 +99,7 @@ for _ in range(1):
                                                                                                   'nsteps', str(nsteps), \
                                                                                                   'gen-temp', str(temp + T_C2K), \
                                                                                                   'gen-seed', str(model_id)])
-
-        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), '1', str(gpu_id), '1', '1', '2', str(maxsol), '1iee112_prot4gmx.pdb']))
+        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), '2', str(gpu_id), '1', '1', '2', str(maxsol), '1iee112_prot4gmx.pdb']))
             
     if(do_mainrun):
         #my.run_it(' '.join(['./mainrun_slurm.sh', model_name, '1', str(mpi_cores), str(gpu_id), main_mdp_filename_base]))

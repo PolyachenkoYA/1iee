@@ -27,11 +27,12 @@ cd $root_path
 cd $run_path
 
 $gmx_serial grompp -f $name.mdp -c $name.gro -p topol.top -o $name.tpr
+
 if [ $gpu_id -eq -1 ]
 then
-    trun -m 1 -ppn=$ompN $gmx_mdrun mdrun -v -deffnm $name -ntomp $ompN -cpi $name.cpt -cpo $name.cpt
+    trun -m 1 -ppn=$mpiN $gmx_mdrun mdrun -v -deffnm $name -ntomp $ompN -cpi $name.cpt -cpo $name.cpt
 else
-    trun -m 1 -ppn=$ompN $gmx_mdrun mdrun -v -deffnm $name -ntomp $ompN -cpi $name.cpt -cpo $name.cpt -gpu_id $gpu_id
+    trun -m 1 -ppn=$mpiN $gmx_mdrun mdrun -v -deffnm $name -ntomp $ompN -cpi $name.cpt -cpo $name.cpt -gpu_id $gpu_id
 fi
 
 cd $root_path
