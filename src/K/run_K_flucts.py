@@ -36,6 +36,7 @@ P_taus = np.array([200, 400, 800, 1600, 3200, 6400, 12800, 25000, 50000, 100000,
 P_taus = np.array([4, 8, 16, 32, 64, 128, 256, 512])
 comprs = np.array([2e-4, 3e-4, 4e-4])
 times = np.array([20.0, 40.0])
+run_suffix = 'serial'
 
 # ============== arg parse ====================
 N_omp_max = multiprocessing.cpu_count()
@@ -99,10 +100,10 @@ for _ in range(1):
                                                                                                   'nsteps', str(nsteps), \
                                                                                                   'gen-temp', str(temp + T_C2K), \
                                                                                                   'gen-seed', str(model_id)])
-        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), '2', str(gpu_id), '1', '1', '2', str(maxsol), '1iee112_prot4gmx.pdb']))
-            
+        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), '1', str(gpu_id), '1', '1', '2', str(maxsol), '1iee112_prot4gmx.pdb']))
+        #my.run_it(' '.join(['./minim_' + run_suffix + '.sh', model_name, str(omp_cores), '1', str(gpu_id), 'em']))
+        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), '1', str(gpu_id), 'em', 'serial']))
+
     if(do_mainrun):
-        #my.run_it(' '.join(['./mainrun_slurm.sh', model_name, '1', str(mpi_cores), str(gpu_id), main_mdp_filename_base]))
-        #my.run_it(' '.join(['./mainrun_serial.sh', model_name, str(omp_cores), '1', str(gpu_id), main_mdp_filename_base]))
-        my.run_it(' '.join(['./mainrun_trun.sh', model_name, str(omp_cores), '1', str(gpu_id), main_mdp_filename_base]))
+        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), '1', str(gpu_id), main_mdp_filename_base, 'serial']))
         my.run_it(' '.join(['./postproc_flucts.sh', model_name]))
