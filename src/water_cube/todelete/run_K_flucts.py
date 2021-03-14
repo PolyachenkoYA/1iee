@@ -18,7 +18,6 @@ main_mdp_filename_base = 'npt'
 no_preproc = 'no'
 preproc_if_permitted = 'ask'
 preproc_force = 'force'
-mdrun_mode = 'serial'
 
 # ================ params =================
 
@@ -26,13 +25,12 @@ times = [0.2, 0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5]
 times = [0.2500, 0.3053, 0.3727, 0.4551, 0.5558, 0.6786, 0.8286, 1.012, 1.235, 1.5085, 1.842, 2.249, 2.746, 3.3535, 4.095, 5.000]
 times = [0.25, 0.5, 1.0, 2.0]
 temps = [0.1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
-temps = [0, 27, 77]
+#temps = [0, 27, 77]
 
 # ============== arg parse ====================
 params = temps
 N_gpus = 4
 N_omp_max = multiprocessing.cpu_count()
-omp_default = 3
 possible_gpu_ids = [str(i) for i in range(N_gpus)] + ['-1']
 possible_omps = [str(i) for i in range(1, N_omp_max + 1)]
 possible_param_ids = [str(i) for i in range(len(params))] + ['all']
@@ -42,7 +40,7 @@ possible_preproc = [no_preproc, preproc_if_permitted, preproc_force]
     my.parse_args(sys.argv[1:], ['-omp', '-mpi', '-gpu_id', '-do_mainrun', '-preproc_mode', '-param_ids', '-id'], \
                   possible_values=[possible_omps, None, possible_gpu_ids, ['no', 'yes'], possible_preproc, possible_param_ids, None], \
                   possible_arg_numbers=[[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], possible_paramids_numbers, [1, 0]], \
-                  default_values=[[str(omp_default)], ['0'], ['-1'], ['yes'], [preproc_force], None, ['0']])
+                  default_values=[[str(N_omp_max)], ['1'], ['0'], ['yes'], [preproc_force], None, ['0']])
 if(param_ids[0] == 'all'):
     param_ids = [str(i) for i in range(1, len(params) + 1)]
 param_ids = [int(i) for i in param_ids]
@@ -55,8 +53,8 @@ preproc_mode = preproc_mode[0]
 # flucts K
 for param_i in param_ids:
     time = 2.0
-    #gpu_id = param_i % N_gpus
-    #gpu_id = param_i // 3
+    gpu_id = param_i % N_gpus
+    gpu_id = param_i // 3
     Tmp = temps[param_i]
     nsteps = np.intc(time / dt)
     model_name = os.path.join('watercube_T' + my.f2str(Tmp))
@@ -77,12 +75,9 @@ for param_i in param_ids:
                 continue
         my.run_it('./clear_restore.sh ' + model_name)
         my.run_it(['python', 'change_mdp.py', '-in', mdp_filepath, '-out', mdp_filepath, '-flds', 'ref-t', str(Tmp + T_C2K), 'nsteps', str(nsteps)])
-        my.run_it(' '.join(['./preproc.sh', model_name, 'solvated']))
-        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), 'solvated', 'min', mdrun_mode]))
-        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), 'min', 'min2', mdrun_mode]))
-        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), 'min2', 'eql', mdrun_mode]))
-        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), 'eql', 'eql2', mdrun_mode]))
+        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), '1', str(gpu_id)]))
     
     if(do_mainrun):
-        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), 'eql2', main_mdp_filename_base, mdrun_mode]))
+        #my.run_it(' '.join(['./mainrun_slurm.sh', model_name, '1', str(mpi_cores), str(gpu_id)]))
+        my.run_it(' '.join(['./mainrun_serial.sh', model_name, str(omp_cores), str(gpu_id), main_mdp_filename_base]))
         my.run_it(' '.join(['./postproc_fluct.sh', model_name]))

@@ -21,6 +21,7 @@ no_preproc = 'no'
 preproc_if_permitted = 'ask'
 preproc_if_needed = 'if_needed'
 preproc_force = 'force'
+minimE_filename_base = 'em'
 
 # ================ params =================
 
@@ -36,7 +37,7 @@ P_taus = np.array([200, 400, 800, 1600, 3200, 6400, 12800, 25000, 50000, 100000,
 P_taus = np.array([4, 8, 16, 32, 64, 128, 256, 512])
 comprs = np.array([2e-4, 3e-4, 4e-4])
 times = np.array([20.0, 40.0])
-run_suffix = 'serial'
+mdrun_mode = 'serial'
 
 # ============== arg parse ====================
 N_omp_max = multiprocessing.cpu_count()
@@ -47,7 +48,7 @@ possible_preproc = [no_preproc, preproc_if_permitted, preproc_force, preproc_if_
     my.parse_args(sys.argv[1:], ['-omp', '-mpi', '-gpu_id', '-do_mainrun', '-preproc_mode', '-param_ids', '-id'], \
                   possible_values=[possible_omps, None, possible_gpu_ids, ['no', 'yes'], possible_preproc, None, None], \
                   possible_arg_numbers=[[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]], \
-                  default_values=[[str(omp_default)], ['1'], ['0'], ['yes'], [preproc_force], ['0'], ['0']])
+                  default_values=[[str(omp_default)], ['0'], ['-1'], ['yes'], [preproc_force], ['0'], ['0']])
 param_ids = [int(i) for i in param_ids]
 omp_cores = int(omp_cores[0])
 mpi_cores = int(mpi_cores[0])
@@ -100,10 +101,10 @@ for _ in range(1):
                                                                                                   'nsteps', str(nsteps), \
                                                                                                   'gen-temp', str(temp + T_C2K), \
                                                                                                   'gen-seed', str(model_id)])
-        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), '1', str(gpu_id), '1', '1', '2', str(maxsol), '1iee112_prot4gmx.pdb']))
-        #my.run_it(' '.join(['./minim_' + run_suffix + '.sh', model_name, str(omp_cores), '1', str(gpu_id), 'em']))
-        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), '1', str(gpu_id), 'em', 'serial']))
+        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1', '1', '2', str(maxsol), '1iee112_prot4gmx.pdb']))
+        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1iee_wions', minimE_filename_base, mdrun_mode]))
+        my.run_it(' '.join(['./save_initial_nojump.sh', model_name, minimE_filename_base]))
 
     if(do_mainrun):
-        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), '1', str(gpu_id), main_mdp_filename_base, 'serial']))
+        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), minimE_filename_base, main_mdp_filename_base, mdrun_mode]))
         my.run_it(' '.join(['./postproc_flucts.sh', model_name]))

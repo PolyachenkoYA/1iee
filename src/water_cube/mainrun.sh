@@ -32,11 +32,11 @@ if [ $gpu_id -ge 0 ]
 then
     cmd="$cmd -gpu_id $gpu_id"
 fi
-if [ $timeout -gr 0 ]
+if [ $timeout -gt 0 ]
 then
     cmd="$cmd -maxh $timeout"
 fi
-if [ $mpiN -gr 0 ]
+if [ $mpiN -gt 0 ]
 then
     cmd="$cmd -ntmpi $mpiN"
 fi
