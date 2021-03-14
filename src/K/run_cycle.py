@@ -32,6 +32,11 @@ if(argc not in [0]):
     print('usage:\n' + sys.argv[0] + '')
     exit(1)
 
+# ======= flucts ===========
+for i in [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11]:
+    cmd = ' '.join(['python', 'run_K_flucts.py', '-omp', '3', '-param_ids', str(i)])
+    my.run_it("screen -d -m -S temp" + str(temp[i]) + " bash -c '" + cmd + "'")
+
 # ================ water anal ===================
 
 #for t in temp:
