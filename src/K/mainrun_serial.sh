@@ -1,13 +1,13 @@
 #!/bin/bash
 
 set -e
-gmx_serial=gmx_mpi
+gmx_serial=gmx_ser_newhead
 #gmx_serial=gmx_serial
 #gmx_serial=gmx_ser_gpu
 
 gmx_mdrun=gmx_mpi
-gmx_mdrun=gmx_angara
-gmx_mdrun="$gmx_serial"
+#gmx_mdrun=gmx_angara
+#gmx_mdrun="$gmx_serial"
 
 argc=$#
 if [ $argc -ne 5 ]
@@ -28,11 +28,12 @@ cd $root_path
 cd $run_path
 
 $gmx_serial grompp -f $name.mdp -c $name.gro -p topol.top -o $name.tpr -maxwarn 2
+
 if [ $gpu_id -eq -1 ]
 then
-	$gmx_mdrun mdrun -v -deffnm $name -ntomp $ompN -dlb no -cpi $name.cpt -cpo $name.cpt # -maxh 24
+    $gmx_mdrun mdrun -v -deffnm $name -ntomp $ompN -dlb no -cpi $name.cpt -cpo $name.cpt # -maxh 24
 else
-	$gmx_mdrun mdrun -v -deffnm $name -ntomp $ompN -dlb no -cpi $name.cpt -cpo $name.cpt -gpu_id $gpu_id # -maxh 24 
+    $gmx_mdrun mdrun -v -deffnm $name -ntomp $ompN -dlb no -cpi $name.cpt -cpo $name.cpt -gpu_id $gpu_id # -maxh 24 
 fi
 #sbatch -J gromacs -p max1n -N 1 --reservation=test --ntasks-per-node=$mpiN --gres=gpu:1 --wrap="$cmd"
 

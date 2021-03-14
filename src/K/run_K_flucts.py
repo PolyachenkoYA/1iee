@@ -56,9 +56,10 @@ preproc_mode = preproc_mode[0]
 model_id = model_id[0]
 # ===================== cycle ===================
 # flucts K
+
 temp = temps[param_ids[0]]
+#time = 40.0
 #gpu_id = param_ids[0] % N_gpus
-gpu_id = (param_ids[0] % 2) + 1
 #compr = comprs[param_ids[1]]
 #time = times[param_ids[2]]
 #for Ptau_i, P_tau in enumerate(P_taus[param_ids[3:]]):
@@ -98,10 +99,10 @@ for _ in range(1):
                                                                                                   'nsteps', str(nsteps), \
                                                                                                   'gen-temp', str(temp + T_C2K), \
                                                                                                   'gen-seed', str(model_id)])
-
-        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), '1', str(gpu_id), '1', '1', '2', str(maxsol), '1iee112_prot4gmx.pdb']))
+        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), '2', str(gpu_id), '1', '1', '2', str(maxsol), '1iee112_prot4gmx.pdb']))
             
     if(do_mainrun):
         #my.run_it(' '.join(['./mainrun_slurm.sh', model_name, '1', str(mpi_cores), str(gpu_id), main_mdp_filename_base]))
-        my.run_it(' '.join(['./mainrun_serial.sh', model_name, str(omp_cores), '1', str(gpu_id), main_mdp_filename_base]))
+        #my.run_it(' '.join(['./mainrun_serial.sh', model_name, str(omp_cores), '1', str(gpu_id), main_mdp_filename_base]))
+        my.run_it(' '.join(['./mainrun_trun.sh', model_name, str(omp_cores), '1', str(gpu_id), main_mdp_filename_base]))
         my.run_it(' '.join(['./postproc_flucts.sh', model_name]))

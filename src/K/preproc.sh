@@ -1,15 +1,17 @@
-#!/bin/bash
+######!/bin/bash
 ### '###' - human actions/comments
 ### '#'   - commands to execute for gmx/chimera
 ### =================================================
 
 set -e
-gmx_serial=gmx_ser_gpu
 gmx_serial=gmx_mpi
+gmx_serial=gmx_ser_gpu
+gmx_serial=gmx_ser_newhead
 
 gmx_mdrun=gmx_mpi
-gmx_mdrun=gmx_angara
-gmx_mdrun=$gmx_serial
+#gmx_mdrun=$HOME/.local/gromacs/bin/gmx_mpi
+#gmx_mdrun=gmx_angara
+#gmx_mdrun=$gmx_serial
 
 argc=$#
 if [ $argc -ne 8 ] && [ $argc -ne 9 ]
@@ -20,7 +22,7 @@ fi
 
 job_id=$1
 omp=$2
-mpi=$3
+mpiN=$3
 gpu_id=$4
 nx=$5
 ny=$6
@@ -72,8 +74,6 @@ cd $run_path
 # ../src/exe/playmol2gmx.sh 1iee_prot.pdb 1iee_prot4gmx.pdb
 
 $gmx_serial pdb2gmx -f $start_pdb_file -o 1iee_init.gro -missing -p $topol_filename < protonation_gromacs.in
-#mv $topol_filename topol_tip4p.top
-#awk '{ gsub(/tip4p/, "tip4p2005"); print }' < topol_tip4p.top > $topol_filename
 $gmx_serial editconf -f 1iee_init.gro -o 1iee_newbox.gro -c -box $lx $ly $lz
 $gmx_serial solvate -cp 1iee_newbox.gro -cs amber03w.ff/tip4p2005.gro -o 1iee_solv.gro -p $topol_filename -maxsol $maxsol
 $gmx_serial grompp -f ions.mdp -c 1iee_solv.gro -p $topol_filename -o 1iee_wions.tpr -maxwarn 5
@@ -81,12 +81,14 @@ $gmx_serial genion -s 1iee_wions.tpr -o 1iee_wions.gro -p $topol_filename -pname
 
 $gmx_serial grompp -f minim.mdp -c 1iee_wions.gro -p $topol_filename -o em.tpr
 #srun --ntasks-per-node=1 $gmx_executable mdrun -v -deffnm em -ntomp $omp -gpu_id $gpu_id -pin on
+
 if [ $gpu_id -eq -1 ]
 then
-        $gmx_mdrun mdrun -v -deffnm em -ntomp $omp
+    $gmx_serial mdrun -v -deffnm em -ntomp $omp
 else
-        $gmx_mdrun mdrun -v -deffnm em -ntomp $omp -gpu_id $gpu_id
+    $gmx_serial mdrun -v -deffnm em -ntomp $omp -gpu_id $gpu_id
 fi
+
 $gmx_serial trjconv -s em.tpr -f em.gro -pbc nojump -o em_nojump.gro < output_whole_sys0.in
 cp em.gro eql.gro
 

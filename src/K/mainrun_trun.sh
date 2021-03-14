@@ -1,13 +1,12 @@
 #!/bin/bash
 
 set -e
-gmx_serial=gmx_serial
-gmx_serial=gmx_ser_gpu
 gmx_serial=gmx_mpi
+gmx_serial=gmx_ser_newhead
 
 gmx_mdrun=gmx_mpi
-gmx_mdrun=gmx_angara
-gmx_mdrun="$gmx_serial"
+#gmx_mdrun=gmx_angara
+#gmx_mdrun="$gmx_serial"
 
 argc=$#
 if [ $argc -ne 5 ]
@@ -28,11 +27,12 @@ cd $root_path
 cd $run_path
 
 $gmx_serial grompp -f $name.mdp -c $name.gro -p topol.top -o $name.tpr
+
 if [ $gpu_id -eq -1 ]
 then
-    trun -m 1 -ppn=$ompN $gmx_mdrun mdrun -v -deffnm $name -ntomp $ompN -cpi $name.cpt -cpo $name.cpt
+    trun -m 1 -ppn=$mpiN $gmx_mdrun mdrun -v -deffnm $name -ntomp $ompN -cpi $name.cpt -cpo $name.cpt
 else
-    trun -m 1 -ppn=$ompN $gmx_mdrun mdrun -v -deffnm $name -ntomp $ompN -cpi $name.cpt -cpo $name.cpt -gpu_id $gpu_id
+    trun -m 1 -ppn=$mpiN $gmx_mdrun mdrun -v -deffnm $name -ntomp $ompN -cpi $name.cpt -cpo $name.cpt -gpu_id $gpu_id
 fi
 
 cd $root_path
