@@ -56,9 +56,9 @@ preproc_mode = preproc_mode[0]
 model_id = model_id[0]
 # ===================== cycle ===================
 # flucts K
-
 temp = temps[param_ids[0]]
-gpu_id = param_ids[0] % N_gpus
+#gpu_id = param_ids[0] % N_gpus
+gpu_id = (param_ids[0] % 2) + 1
 #compr = comprs[param_ids[1]]
 #time = times[param_ids[2]]
 #for Ptau_i, P_tau in enumerate(P_taus[param_ids[3:]]):

@@ -102,7 +102,7 @@ def proc_dV_model(temp, model_id=0, cut_time_0=5, cut_time_1=5, to_draw=False):
 def proc_series(data, cut_time, time, xlbl='time (ns)', ylbl='', yk=1, title='', to_draw=False):
     tk = 1e3  # ps -> ns
     time = time / tk
-    cut_time /= tk
+    #cut_time = cut_time / tk
     data = data / yk
     inds = (time > cut_time)
     filt_data = data[inds]
@@ -126,8 +126,8 @@ def proc_series(data, cut_time, time, xlbl='time (ns)', ylbl='', yk=1, title='',
 #def proc_fluct_model(P_tau, compr, time, model_id=0, temp=35.0, cut_time=5, draw_T=False, draw_P=False, draw_V=False, draw_rho=False):
 def proc_fluct_model(temp, model_id=0, cut_time=5, draw_T=False, draw_P=False, draw_V=False, draw_rho=False, gromacs_provided=False):
     #model_name = 'flucts_Ptau' + my.f2str(P_tau) + '_compr' + my.f2str(compr) + '_time' + my.f2str(time) + '_' + str(model_id)
-    #model_name = 'flucts_temp' + my.f2str(temp) + '_' + str(model_id)
-    model_name = 'watercube_T' + my.f2str(temp)
+    model_name = 'flucts_temp' + my.f2str(temp) + '_' + str(model_id)
+    #model_name = 'watercube_T' + my.f2str(temp)
     model_path = os.path.join(run_path, model_name)
     filepath = os.path.join(model_path, npt_filename)
     cptsave_filepath = filepath + '_prev.cpt'
@@ -138,17 +138,17 @@ def proc_fluct_model(temp, model_id=0, cut_time=5, draw_T=False, draw_P=False, d
     if(xvg_file is None):
         return None, None, None
     N_fields = len(xvg_file.names)
-    time = xvg_file.array[0] * 1e-3
+    time = xvg_file.array[0]
     stab_time_ind = (time < cut_time)
 
     #title=r'$\tau_P = ' + str(P_tau) + r'$, $\kappa_T = ' + str(compr) + r'$, 
     title = 'Temp = ' + my.f2str(temp)
     Ptau_to_draw = 512
     compr_to_draw = 3e-4
-    T_cut, T_mean, T_std, d_T, N_cut = proc_series(xvg_file.array[2], cut_time, time, ylbl='T (K)', title=title, to_draw=(draw_T))
-    P_cut, P_mean, P_std, d_P, _ = proc_series(xvg_file.array[3] * 1e5, cut_time, time, yk=1e5, ylbl='P (atm)', title=title, to_draw=(draw_P))
-    V_cut, V_mean, V_std, d_V, _ = proc_series(xvg_file.array[4] * 1e-27, cut_time, time, yk=1e-27, ylbl=r'V ($nm^3$)', title=title, to_draw=(draw_V))
-    rho_cut, rho_mean, rho_std, d_rho, _ = proc_series(xvg_file.array[5], cut_time, time, yk=1000, ylbl=r'$\rho (g/cm^3)$', title=title, to_draw=(draw_rho))
+    T_cut, T_mean, T_std, d_T, N_cut = proc_series(xvg_file.array[1], cut_time, time, ylbl='T (K)', title=title, to_draw=(draw_T))
+    P_cut, P_mean, P_std, d_P, _ = proc_series(xvg_file.array[2] * 1e5, cut_time, time, yk=1e5, ylbl='P (atm)', title=title, to_draw=(draw_P))
+    V_cut, V_mean, V_std, d_V, _ = proc_series(xvg_file.array[3] * 1e-27, cut_time, time, yk=1e-27, ylbl=r'V ($nm^3$)', title=title, to_draw=(draw_V))
+    rho_cut, rho_mean, rho_std, d_rho, _ = proc_series(xvg_file.array[4], cut_time, time, yk=1000, ylbl=r'$\rho (g/cm^3)$', title=title, to_draw=(draw_rho))
     
     gro_filepath = filepath + '.gro'
     box_sizes_line = read_last_line(gro_filepath)
@@ -193,7 +193,7 @@ P_taus = np.array([4, 8, 16, 32, 64, 128, 256, 512])
 comprs = np.array([2e-4, 3e-4, 4e-4])
 comprs = np.array([3e-4])
 times = np.array([20.0, 40.0])
-stab_time = 0.5
+stab_time = 2.0
 
 # ================ K(T) ===================
 draw_all = False
