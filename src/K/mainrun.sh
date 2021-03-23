@@ -2,6 +2,7 @@
 
 set -e
 gmx_serial=gmx_ser_newhead
+gmx_serial=gmx_mpi
 #gmx_serial=gmx_serial
 #gmx_serial=gmx_ser_gpu
 
@@ -32,11 +33,11 @@ if [ $gpu_id -ge 0 ]
 then
     cmd="$cmd -gpu_id $gpu_id"
 fi
-if [ $timeout -gr 0 ]
+if [ $timeout -gt 0 ]
 then
     cmd="$cmd -maxh $timeout"
 fi
-if [ $mpiN -gr 0 ]
+if [ $mpiN -gt 0 ]
 then
     cmd="$cmd -ntmpi $mpiN"
 fi

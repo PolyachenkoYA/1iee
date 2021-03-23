@@ -29,7 +29,7 @@ N_gpus = 4
 T_C2K = 273.15
 dt = 2e-6    # 1 fs = 1e-6 ns
 compr = 0.0003
-time = 40
+time = 10
 omp_default = 3
 equil_maxsol_poly = [-2.9516, 1117.2]   # maxsol = np.polyval(equil_maxsol_poly, T), [T] = C (not K)
 temps = np.array([0.1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
