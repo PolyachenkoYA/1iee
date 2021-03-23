@@ -30,7 +30,6 @@ nz=$7
 lx=$(echo 7.7061*$nx | bc)
 ly=$(echo 7.7061*$ny | bc)
 lz=$(echo 3.7223*$nz | bc)
-lz_big=$(echo $lz+25 | bc)
 maxsol=$8
 if [ $argc -gt 8 ]
 then
@@ -75,11 +74,10 @@ cd $run_path
 # ../src/exe/playmol2gmx.sh 1iee_prot.pdb 1iee_prot4gmx.pdb
 
 $gmx_serial pdb2gmx -f $start_pdb_file -o 1iee_init.gro -missing -p $topol_filename < protonation_gromacs.in
-$gmx_serial editconf -f 1iee_init.gro -o 1iee_smallbox.gro -c -box $lx $ly $lz
+$gmx_serial editconf -f 1iee_init.gro -o 1iee_newbox.gro -c -box $lx $ly $lz
 #$gmx_serial solvate -cp 1iee_newbox.gro -cs amber03w.ff/tip4p2005.gro -o 1iee_solv.gro -p $topol_filename -maxsol $maxsol
-$gmx_serial solvate -cp 1iee_smallbox.gro -cs tip4p.gro                  -o 1iee_solv.gro -p $topol_filename -maxsol $maxsol
-$gmx_serial editconf -f 1iee_solv.gro -o 1iee_bigbox.gro -c -box $lx $ly $lz_big
-$gmx_serial grompp -f ions.mdp -c 1iee_bigbox.gro -p $topol_filename -o 1iee_wions.tpr -maxwarn 5
+$gmx_serial solvate -cp 1iee_newbox.gro -cs tip4p.gro                  -o 1iee_solv.gro -p $topol_filename -maxsol $maxsol
+$gmx_serial grompp -f ions.mdp -c 1iee_solv.gro -p $topol_filename -o 1iee_wions.tpr -maxwarn 5
 $gmx_serial genion -s 1iee_wions.tpr -o 1iee_wions.gro -p $topol_filename -pname NA -nname CL -neutral -rmin 0.2  < genion_gromacs.in
 
 cd $root_path
