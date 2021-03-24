@@ -11,7 +11,9 @@ def run_it(cmd, shell=False):
     sp.run(cmd, shell=shell)
 
 # =============== paths ================
-root_path = my.git_root_path()
+#root_path = my.git_root_path()
+with open('git_root_path', 'r') as f:
+    root_path = f.readline()
 run_path = os.path.join(root_path, 'run')
 exe_path = os.path.join(root_path, 'src', 'K')
 res_path = os.path.join(root_path, 'res')
@@ -38,6 +40,7 @@ P_taus = np.array([4, 8, 16, 32, 64, 128, 256, 512])
 comprs = np.array([2e-4, 3e-4, 4e-4])
 times = np.array([20.0, 40.0])
 mdrun_mode = 'serial'
+mdrun_mode = 'slurm'
 
 # ============== arg parse ====================
 N_omp_max = multiprocessing.cpu_count()

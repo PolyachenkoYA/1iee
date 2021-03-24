@@ -3,10 +3,12 @@
 set -e
 gmx_serial=gmx_ser_newhead
 gmx_serial=gmx_mpi
+gmx_serial=$HOME/gromacs-2020/build_lin/bin/gmx
 #gmx_serial=gmx_serial
 #gmx_serial=gmx_ser_gpu
 
 gmx_mdrun=gmx_mpi
+gmx_mdrun=$HOME/gromacs-2020/build/bin/gmx_mpi
 #gmx_mdrun=gmx_angara
 #gmx_mdrun="$gmx_serial"
 
@@ -23,15 +25,16 @@ gpu_id=$4
 in_name=$5
 name=$6
 run_mode=$7
-root_path=$(git rev-parse --show-toplevel)
+#root_path=$(git rev-parse --show-toplevel)
+root_path=`cat git_root_path`
 run_path=run/$job_id
 exe_path=src/K
 timeout=0
 
-cmd="mdrun -v -deffnm $name -ntomp $ompN -cpi $name.cpt -cpo $name.cpt -pin on"
+cmd="mdrun -v -deffnm $name -ntomp $ompN -cpi $name.cpt -cpo $name.cpt -pin off -dlb no"
 if [ $gpu_id -ge 0 ]
 then
-    cmd="$cmd -gpu_id $gpu_id"
+    cmd="$cmd -gpu_id $gpu_id -nb gpu"
 fi
 if [ $timeout -gt 0 ]
 then
@@ -52,7 +55,9 @@ then
     $gmx_serial $cmd
 elif [[ "$run_mode" == "slurm" ]]
 then
-    srun --ntasks-per-node=$mpiN $gmx_mdrun $cmd
+    echo "srun --ntasks-per-node=1 $gmx_mdrun $cmd"
+    #srun --ntasks-per-node=$mpiN $gmx_mdrun $cmd
+    srun --ntasks-per-node=1 $gmx_mdrun $cmd
 elif [[ "$run_mode" == "trun" ]]
 then
     trun -m 1 -ppn=$mpiN $gmx_mdrun $cmd

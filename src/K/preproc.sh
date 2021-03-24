@@ -5,11 +5,12 @@
 
 set -e
 gmx_serial=gmx_mpi
+gmx_serial=$HOME/gromacs-2020/build_lin/bin/gmx
 #gmx_serial=gmx_ser_gpu
 #gmx_serial=gmx_ser_newhead
 
 gmx_mdrun=gmx_mpi
-#gmx_mdrun=$HOME/.local/gromacs/bin/gmx_mpi
+gmx_mdrun=$HOME/gromacs-2020/build/bin/gmx_mpi
 #gmx_mdrun=gmx_angara
 #gmx_mdrun=$gmx_serial
 
@@ -38,7 +39,8 @@ then
 else
         start_pdb_file=1iee_prot4gmx.pdb
 fi
-root_path=$(git rev-parse --show-toplevel)
+#root_path=$(git rev-parse --show-toplevel)
+root_path=`cat git_root_path`
 run_path=run/$job_id
 exe_path=src/K
 topol_filename=topol.top

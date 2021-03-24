@@ -6,7 +6,8 @@ if [ $argc -ne 1 ]; then
 	exit 1
 fi
 job_id=$1
-root_path=$(git rev-parse --show-toplevel)
+#root_path=$(git rev-parse --show-toplevel)
+root_path=`cat git_root_path`
 exe_path=src/K
 src_path=$exe_path/init
 run_path=run/$job_id

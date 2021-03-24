@@ -7,6 +7,7 @@ set -e
 gmx_serial=gmx_mpi
 gmx_serial=gmx_ser_gpu
 gmx_serial=gmx_ser_newhead
+gmx_serial=$HOME/gromacs-2020/build_lin/bin/gmx
 
 argc=$#
 if [ $argc -ne 2 ]
@@ -18,7 +19,8 @@ fi
 job_id=$1
 name=$2
 
-root_path=$(git rev-parse --show-toplevel)
+#root_path=$(git rev-parse --show-toplevel)
+root_path=`cat git_root_path`
 run_path=run/$job_id
 exe_path=src/K
 topol_filename=topol.top
