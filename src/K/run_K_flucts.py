@@ -24,14 +24,15 @@ preproc_if_permitted = 'ask'
 preproc_if_needed = 'if_needed'
 preproc_force = 'force'
 minimE_filename_base = 'em'
+init_pdb_filename = '1iee112_prot4gmx.pdb'
 
 # ================ params =================
 
-N_gpus = 4
+N_gpus = 1
 T_C2K = 273.15
 dt = 2e-6    # 1 fs = 1e-6 ns
 compr = 0.0003
-time = 50
+time = 35
 omp_default = multiprocessing.cpu_count()
 equil_maxsol_poly = [-2.9516, 1117.2]   # maxsol = np.polyval(equil_maxsol_poly, T), [T] = C (not K)
 temps = np.array([0.1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
@@ -72,7 +73,7 @@ for _ in range(1):
     maxsol = int((round(np.polyval(equil_maxsol_poly, temp)) + 30) * 2)
     nsteps = int(round(time / dt))
     
-    model_name = 'flucts_temp' + my.f2str(temp) + '_' + model_id
+    model_name = 'flucts_temp' + my.f2str(temp)
     mdp_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.mdp')
     eql_filepath = os.path.join(run_path, model_name, eql_mdp_filename_base + '.mdp')
     checkpoint_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.cpt')
@@ -80,16 +81,13 @@ for _ in range(1):
         
     if(preproc_mode in [preproc_if_permitted, preproc_force, preproc_if_needed]):
         if(os.path.isfile(checkpoint_filepath)):
-            print('WARNING:\npreproc_mode is ' + preproc_mode + ', but the checkpoint file "' + checkpoint_filepath + '" was found.\nRunning the model from the initial .pdb.')
+            print('WARNING:\npreproc_mode is ' + preproc_mode + ', the checkpoint file "' + checkpoint_filepath + '" was found.')
             if(preproc_mode == preproc_if_permitted):
                 skip = (input('Proceed? (y/N)') != 'y')
-                print(1)
             elif(preproc_mode == preproc_force):
                 skip = False
-                print(2)
             elif(preproc_mode == preproc_if_needed):
                 skip = True
-                print(3)
         else:
             skip = False
     
@@ -97,14 +95,15 @@ for _ in range(1):
         skip = True 
                         
     if(skip):
-        print('Skipping')
+        print('Skipping preproc')
     else:
+		print('Running the model from the initial "' + init_pdb_filename + '"')
         my.run_it('./clear_restore.sh ' + model_name)
         my.run_it(['python', 'change_mdp.py', '-in', mdp_filepath, '-out', mdp_filepath, '-flds', 'ref-t', str(temp + T_C2K), \
                                                                                                   'nsteps', str(nsteps), \
                                                                                                   'gen-temp', str(temp + T_C2K), \
                                                                                                   'gen-seed', str(model_id)])
-        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1', '1', '2', str(maxsol), '1iee112_prot4gmx.pdb']))
+        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1', '1', '2', str(maxsol), init_pdb_filename]))
         my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1iee_wions', minimE_filename_base, mdrun_mode, '1']))
         my.run_it(' '.join(['./save_initial_nojump.sh', model_name, minimE_filename_base]))
 

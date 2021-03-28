@@ -9,10 +9,16 @@ from matplotlib import cm as colormaps
 from numba import jit
 from matplotlib.colors import LogNorm
 import dill
+import scipy as sci
 
 import mylib as my
 import mdtraj as mdt
 import gromacs.formats as gmx
+
+def rollavg_convolve_edges(a, n):
+    assert n % 2 == 1
+    #return sci.convolve(a, np.ones(n, dtype='float'), 'same') / sci.convolve( np.ones(len(a)), np.ones(n), 'same')
+    return np.convolve(a, np.ones(n, dtype='float'), 'same') / np.convolve( np.ones(len(a)), np.ones(n), 'same')
 
 def files_exist(filenames):
     for f_name in filenames:
@@ -31,6 +37,20 @@ def load_xvg(filepath, failsafe=2):
     xvg_file = gmx.XVG()
     xvg_file.read(filepath)
     return xvg_file
+    
+def parse_xvg(xvg_data, fields):
+    N_frames = len(xvg_data.array[0, :])
+    N_f = len(fields)
+    res = np.zeros((N_f, N_frames))
+    for fi in range(N_f):
+        ind = np.where([name == fields[fi] for name in xvg_data.names])[0]
+        if(ind.size == 1):
+            res[fi, :] = xvg_data.array[ind[0] + 1, :]   # +1 because 0th column is time and it's not in fields
+        else:
+            print('field "' + fields[fi] + '" not found of found more than once (ind = ' + str(ind) + ')')
+
+    return res
+
 
 # =============== global paths ================
 root_path = my.git_root_path()
@@ -48,6 +68,8 @@ readframes_timestep = 1
 supercell = np.array([1, 1, 2], dtype=np.intc)
 verbose = True
 to_draw_dist = False
+to_draw_P = True
+to_draw_L = False
 
 # ============== arg parse =================
 supercell_str = ''.join([str(x) for x in supercell])
@@ -129,21 +151,10 @@ if(verbose):
     print('w_crd shape: ', w_crd.shape)
 
 # =================== process ======================
-def parse_xvg(xvg_data, fields):
-    N_frames = len(xvg_data.array[0, :])
-    N_f = len(fields)
-    res = np.zeros((N_f, N_frames))
-    for fi in range(N_f):
-        ind = np.where([name == fields[fi] for name in xvg_data.names])[0]
-        if(ind.size == 1):
-            res[fi, :] = xvg_data.array[ind[0] + 1, :]   # +1 because 0th column is time and it's not in fields
-        else:
-            print('field "' + fields[fi] + '" not found of found more than once (ind = ' + str(ind) + ')')
-
-    return res
-
 Lbox = parse_xvg(xvg_file, ['Box-X', 'Box-Y', 'Box-Z'])
+Pbox = parse_xvg(xvg_file, ['Pres-XX', 'Pres-YY', 'Pres-ZZ'])
 time_xvg = xvg_file.array[0] * 1e-3
+dt_xvg = abs(time_xvg[1] - time_xvg[0])
 
 w_z = w_crd[:, :, 2]
 Zmin = np.min(w_z[:])
@@ -185,6 +196,35 @@ for ti in range(N_av):
 fig, ax = my.get_fig(r'$t$ (ns)', r'$\rho_w$ (kg / $m^3$)', title=r'$\rho_w(t)$; $T$ = ' + my.f2str(Tmp) + r' $C^\circ$; $\rho_{sat} = ' + my.f2str(rho_atm) + '$ kg / $m^3$')
 t_draw = (time[hist_av_inds[:, 0]] + time[hist_av_inds[:, 1] - 1]) / 2
 ax.errorbar(t_draw, gas_rho, d_gas_rho, fmt='o', markerfacecolor='None')
+
+if(to_draw_L):
+    fig_z, ax_z = my.get_fig(r'$t$ (ns)', r'$L_z$ (nm)', title=r'$L_z(t)$; $T = ' + my.f2str(Tmp) + ' C^\circ$')
+    ax_z.plot(time_xvg, Lbox[2, :])
+    fig_xy, ax_xy = my.get_fig(r'$t$ (ns)', r'$L$ (nm)', title=r'$L(t)$; $T = ' + my.f2str(Tmp) + ' C^\circ$')
+    ax_xy.plot(time_xvg, Lbox[0, :], label=r'$L_x$')
+    ax_xy.plot(time_xvg, Lbox[1, :], label=r'$L_y$')
+    ax_xy.legend()
+
+if(to_draw_P):
+    fig_Pz, ax_Pz = my.get_fig(r'$t$ (ns)', r'$P_z$ (nm)', title=r'$P_z(t)$; $T = ' + my.f2str(Tmp) + ' C^\circ$')
+    ax_Pz.plot(time_xvg, Pbox[2, :], color = my.colors[2], alpha=0.1, label='no avg')
+    ax_Pz.plot(time_xvg, rollavg_convolve_edges(Pbox[2, :], 51), color = my.colors[2], alpha=0.5, label='avg = ' + my.f2str(dt_xvg * 51) + ' ns')
+    ax_Pz.plot(time_xvg, rollavg_convolve_edges(Pbox[2, :], 251), color = my.colors[2], label='avg = ' + my.f2str(dt_xvg * 251) + ' ns')
+
+    fig_Pxy, ax_Pxy = my.get_fig(r'$t$ (ns)', r'$P$ (bar)', title=r'$P(t)$; $T = ' + my.f2str(Tmp) + ' C^\circ$')
+    ax_Pxy.plot(time_xvg, Pbox[1, :], color = my.colors[1], alpha=0.1, label='no avg')
+    ax_Pxy.plot(time_xvg, rollavg_convolve_edges(Pbox[1, :], 51), color = my.colors[1], alpha=0.5, label='avg = ' + my.f2str(dt_xvg * 51) + ' ns')
+    ax_Pxy.plot(time_xvg, rollavg_convolve_edges(Pbox[1, :], 251), color = my.colors[1], label=r'$P_y$; avg = ' + my.f2str(dt_xvg * 251) + ' ns')
+    ax_Pxy.plot(time_xvg, Pbox[0, :], color = my.colors[0], alpha=0.1, label='no avg')
+    ax_Pxy.plot(time_xvg, rollavg_convolve_edges(Pbox[0, :], 51), color = my.colors[0], alpha=0.5, label='avg = ' + my.f2str(dt_xvg * 51) + ' ns')
+    ax_Pxy.plot(time_xvg, rollavg_convolve_edges(Pbox[0, :], 251), color = my.colors[0], label=r'$P_y$; avg = ' + my.f2str(dt_xvg * 251) + ' ns')
+    ax_Pxy.legend()
+    
+    fig_Pav, ax_Pav = my.get_fig(r'$t$ (ns)', r'$P$ (bar)', title=r'$P(t)$; $T = ' + my.f2str(Tmp) + ' C^\circ$')
+    ax_Pav.plot(time_xvg, rollavg_convolve_edges(Pbox[0, :], 251), color = my.colors[0], label=r'$P_x$; avg = ' + my.f2str(dt_xvg * 251) + ' ns')
+    ax_Pav.plot(time_xvg, rollavg_convolve_edges(Pbox[1, :], 251), color = my.colors[1], label=r'$P_y$; avg = ' + my.f2str(dt_xvg * 251) + ' ns')
+    ax_Pav.plot(time_xvg, rollavg_convolve_edges(Pbox[2, :], 251), color = my.colors[2], label=r'$P_z$; avg = ' + my.f2str(dt_xvg * 251) + ' ns')
+    ax_Pav.legend()
 
 if(to_draw_dist):
     fig_dist, ax_dist = my.get_fig(r'z (nm)', r'$\rho_w$ (kg / $m^3$)', title=r'$\rho_w(z)$', yscl='log')
