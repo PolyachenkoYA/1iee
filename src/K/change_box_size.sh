@@ -4,6 +4,7 @@ set -e
 
 gmx_serial=gmx_mpi
 gmx_serial=$HOME/gromacs-2020/build_lin/bin/gmx
+gmx_serial=gmx_ser_20
 
 argc=$#
 if [ $argc -ne 4 ]

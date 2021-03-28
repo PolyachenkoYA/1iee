@@ -6,12 +6,10 @@
 set -e
 gmx_serial=gmx_mpi
 gmx_serial=$HOME/gromacs-2020/build_lin/bin/gmx
-#gmx_serial=gmx_ser_gpu
-#gmx_serial=gmx_ser_newhead
+gmx_serial=gmx_ser_20
 
 gmx_mdrun=gmx_mpi
 gmx_mdrun=$HOME/gromacs-2020/build/bin/gmx_mpi
-#gmx_mdrun=gmx_angara
 #gmx_mdrun=$gmx_serial
 
 argc=$#

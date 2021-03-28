@@ -31,15 +31,15 @@ N_gpus = 4
 T_C2K = 273.15
 dt = 2e-6    # 1 fs = 1e-6 ns
 compr = 0.0003
-time = 10
-omp_default = 3
+time = 50
+omp_default = multiprocessing.cpu_count()
 equil_maxsol_poly = [-2.9516, 1117.2]   # maxsol = np.polyval(equil_maxsol_poly, T), [T] = C (not K)
 temps = np.array([0.1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
 P_taus = np.array([200, 400, 800, 1600, 3200, 6400, 12800, 25000, 50000, 100000, 200000, 400000, 800000, 1600000, 3200000, 6400000])
 P_taus = np.array([4, 8, 16, 32, 64, 128, 256, 512])
 comprs = np.array([2e-4, 3e-4, 4e-4])
 times = np.array([20.0, 40.0])
-mdrun_mode = 'serial'
+#mdrun_mode = 'serial'
 mdrun_mode = 'slurm'
 
 # ============== arg parse ====================
@@ -69,7 +69,7 @@ temp = temps[param_ids[0]]
 #time = times[param_ids[2]]
 #for Ptau_i, P_tau in enumerate(P_taus[param_ids[3:]]):
 for _ in range(1):
-    maxsol = int(round(np.polyval(equil_maxsol_poly, temp) * 2))
+    maxsol = int((round(np.polyval(equil_maxsol_poly, temp)) + 30) * 2)
     nsteps = int(round(time / dt))
     
     model_name = 'flucts_temp' + my.f2str(temp) + '_' + model_id
@@ -105,9 +105,9 @@ for _ in range(1):
                                                                                                   'gen-temp', str(temp + T_C2K), \
                                                                                                   'gen-seed', str(model_id)])
         my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1', '1', '2', str(maxsol), '1iee112_prot4gmx.pdb']))
-        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1iee_wions', minimE_filename_base, mdrun_mode]))
+        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1iee_wions', minimE_filename_base, mdrun_mode, '1']))
         my.run_it(' '.join(['./save_initial_nojump.sh', model_name, minimE_filename_base]))
 
     if(do_mainrun):
-        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), minimE_filename_base, main_mdp_filename_base, mdrun_mode]))
+        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), minimE_filename_base, main_mdp_filename_base, mdrun_mode, '0' if skip else '1']))
         my.run_it(' '.join(['./postproc_flucts.sh', model_name]))

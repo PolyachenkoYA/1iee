@@ -5,9 +5,8 @@
 
 set -e
 gmx_serial=gmx_mpi
-gmx_serial=gmx_ser_gpu
-gmx_serial=gmx_ser_newhead
 gmx_serial=$HOME/gromacs-2020/build_lin/bin/gmx
+gmx_serial=gmx_ser_20
 
 argc=$#
 if [ $argc -ne 2 ]
@@ -28,6 +27,7 @@ cd $root_path
 cd $run_path
 
 $gmx_serial trjconv -s $name.tpr -f $name.gro -pbc nojump -o $name\_nojump.gro < output_whole_sys0.in
+$gmx_serial editconf -f $name\_nojump.gro -o $name\_nojump.pdb
 
 #$gmx_serial grompp -f eql.mdp -c eql.gro -p $topol_filename -o eql.tpr
 #if [ $gpu_id -eq -1 ]
