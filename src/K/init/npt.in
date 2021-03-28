@@ -2,7 +2,25 @@
 17
 21
 22
+18
+19
+20
+34
+38
+42
 0
+
+#
+15 - Temperature
+17 - Pressure
+21 - Volume
+22 - Density
+18 - Lx
+19 - Ly
+20 - Lz
+34 - Pxx
+38 - Pyy
+42 - Pzz
 
 # old ones, for desmos I suppose
 5
