@@ -58,6 +58,22 @@ run_path = os.path.join(root_path, 'run')
 exe_path = os.path.join(root_path, 'src', 'K')
 res_path = os.path.join(root_path, 'res')
 
+# ============== arg parse =================
+
+[Tmp, recomp, Zstep, avg_hist_time, extra_water, to_save_pics, to_draw_pics, comprZ], _ = \
+    my.parse_args(sys.argv[1:], ['-temp', '-recomp', '-Zstep', '-avg_time', '-extra_water', '-save_pics', '-draw_pics', '-comprZ'], \
+                  possible_values=[None, ['0', '1'], None, None, None, ['0', '1'], ['0', '1'], None], \
+                  possible_arg_numbers=[[1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]], \
+                  default_values=[None, ['0'], ['0.5'], ['2.5'], ['0'], ['0'], ['1'], ['10']])
+Tmp = float(Tmp)
+recomp = (recomp[0] == '1')
+Zstep = float(Zstep[0])
+avg_hist_time = float(avg_hist_time[0])
+extra_water = int(extra_water[0])
+to_save_pics = (to_save_pics[0] == '1')
+to_draw_pics = (to_draw_pics[0] == '1') or to_save_pics
+comprZ = float(comprZ[0])
+
 # ================ params =================
 T_C2K = 273.15
 dt = 2e-6    # 1 fs = 1e-6 ns,      dt of the numerica scheme
@@ -67,28 +83,16 @@ gas_max_rho = 0.1
 readframes_timestep = 1
 supercell = np.array([1, 1, 2], dtype=np.intc)
 verbose = True
-to_draw_dist = False
-to_draw_P = True
-to_draw_L = False
-
-# ============== arg parse =================
-supercell_str = ''.join([str(x) for x in supercell])
-
-[Tmp, recomp, Zstep, avg_hist_time], _ = \
-    my.parse_args(sys.argv[1:], ['-temp', '-recomp', '-Zstep', '-avg_time'], \
-                  possible_values=[None, ['0', '1'], None, None], \
-                  possible_arg_numbers=[[1], [0, 1], [0, 1], [0, 1]], \
-                  default_values=[None, ['0'], ['0.5'], ['1.0']])
-Tmp = float(Tmp)
-recomp = (recomp[0] == '1')
-Zstep = float(Zstep[0])
-avg_hist_time = float(avg_hist_time[0])
+to_draw_dist = to_draw_pics and False
+to_draw_P = to_draw_pics and True
+to_draw_L = to_draw_pics and True
 
 step_hist_av = int(round(avg_hist_time / Dt))
 rho_atm = 101000 * 0.018 / (8.31 * (Tmp + T_C2K))
+supercell_str = ''.join([str(x) for x in supercell])
 
 # =================== per-model paths ======================
-model_name = 'flucts_temp' + my.f2str(Tmp) + '_0'
+model_name = 'flucts_t4p2005_temp' + my.f2str(Tmp) + '_extW' + str(extra_water) + '_comprZ' + str(comprZ)
 model_path = os.path.join(run_path, model_name)
 traj_filepath = os.path.join(model_path, 'npt.xtc')
 xvg_filepath = os.path.join(model_path, 'npt.xvg')
@@ -97,6 +101,7 @@ init_pdb_filepath = os.path.join(model_path, 'em_nojump.pdb')
 wcrd_filepath = os.path.join(model_path, 'water_coord.npy')
 xvg_bin_filepath = os.path.join(model_path, 'xvg.pkl')
 init_pdb_bin_filepath = os.path.join(model_path, 'initPDB.pkl')
+_filepath = os.path.join(model_path, 'npt.xtc')
 
 data_files = [xvg_bin_filepath, init_pdb_bin_filepath, wcrd_filepath]
 recomp = recomp or not files_exist(data_files)
@@ -117,7 +122,7 @@ if(os.path.isfile(init_pdb_bin_filepath) and not recomp):
     with open(init_pdb_bin_filepath, 'rb') as f:
         init_traj = dill.load(f)        
 else:
-    print('reading "' + init_pdb_bin_filepath + '"')
+    print('reading "' + init_pdb_filepath + '"')
     init_traj = mdt.load(traj_filepath, stride=100000, top=init_pdb_filepath)
     with open(init_pdb_bin_filepath, 'wb') as f:
         dill.dump(init_traj, f)        
@@ -193,17 +198,28 @@ for ti in range(N_av):
     gas_rho[ti] = np.mean(water_hist_average[ti, gas_Z_ind])
     d_gas_rho[ti] = np.sum(d_water_hist_average[ti, gas_Z_ind] ** 2) / np.sum(gas_Z_ind)
 
-fig, ax = my.get_fig(r'$t$ (ns)', r'$\rho_w$ (kg / $m^3$)', title=r'$\rho_w(t)$; $T$ = ' + my.f2str(Tmp) + r' $C^\circ$; $\rho_{sat} = ' + my.f2str(rho_atm) + '$ kg / $m^3$')
-t_draw = (time[hist_av_inds[:, 0]] + time[hist_av_inds[:, 1] - 1]) / 2
-ax.errorbar(t_draw, gas_rho, d_gas_rho, fmt='o', markerfacecolor='None')
+if(to_draw_pics):
+    fig, ax = my.get_fig(r'$t$ (ns)', r'$\rho_w$ (kg / $m^3$)', title=r'$\rho_w(t)$; $T$ = ' + my.f2str(Tmp) + r' $C^\circ$; $\rho_{sat} = ' + my.f2str(rho_atm) + '$ kg / $m^3$')
+    t_draw = (time[hist_av_inds[:, 0]] + time[hist_av_inds[:, 1] - 1]) / 2
+    ax.errorbar(t_draw, gas_rho, d_gas_rho, fmt='o', markerfacecolor='None')
+    
+    if(to_save_pics):
+        pic_rho_t_filepath = os.path.join(model_path, 'rho(t).png')
+        fig.savefig(pic_rho_t_filepath)
 
 if(to_draw_L):
-    fig_z, ax_z = my.get_fig(r'$t$ (ns)', r'$L_z$ (nm)', title=r'$L_z(t)$; $T = ' + my.f2str(Tmp) + ' C^\circ$')
+    fig_z, ax_z = my.get_fig(r'$t$ (ns)', r'$L_z$ (nm)', title=r'$L_z(t)$; $\beta = ' + my.f2str(comprZ) + ' (1/bar)$')
     ax_z.plot(time_xvg, Lbox[2, :])
-    fig_xy, ax_xy = my.get_fig(r'$t$ (ns)', r'$L$ (nm)', title=r'$L(t)$; $T = ' + my.f2str(Tmp) + ' C^\circ$')
+    fig_xy, ax_xy = my.get_fig(r'$t$ (ns)', r'$L$ (nm)', title=r'$L(t)$; $T = ' + my.f2str(comprZ) + ' (1/bar)$')
     ax_xy.plot(time_xvg, Lbox[0, :], label=r'$L_x$')
     ax_xy.plot(time_xvg, Lbox[1, :], label=r'$L_y$')
     ax_xy.legend()
+    
+    if(to_save_pics):
+        pic_Lz_t_filepath = os.path.join(model_path, 'Lz(t).png')
+        pic_Lxy_t_filepath = os.path.join(model_path, 'Lxy(t).png')
+        fig_z.savefig(pic_Lz_t_filepath)
+        fig_xy.savefig(pic_Lxy_t_filepath)
 
 if(to_draw_P):
     fig_Pz, ax_Pz = my.get_fig(r'$t$ (ns)', r'$P_z$ (nm)', title=r'$P_z(t)$; $T = ' + my.f2str(Tmp) + ' C^\circ$')
@@ -226,6 +242,14 @@ if(to_draw_P):
     ax_Pav.plot(time_xvg, rollavg_convolve_edges(Pbox[2, :], 251), color = my.colors[2], label=r'$P_z$; avg = ' + my.f2str(dt_xvg * 251) + ' ns')
     ax_Pav.legend()
 
+    if(to_save_pics):
+        pic_Pz_t_filepath = os.path.join(model_path, 'Pz(t).png')
+        pic_Pxy_t_filepath = os.path.join(model_path, 'Pxy(t).png')
+        pic_Pav_t_filepath = os.path.join(model_path, 'Pav(t).png')
+        fig_Pz.savefig(pic_Pz_t_filepath)
+        fig_Pxy.savefig(pic_Pxy_t_filepath)
+        fig_Pav.savefig(pic_Pav_t_filepath)
+
 if(to_draw_dist):
     fig_dist, ax_dist = my.get_fig(r'z (nm)', r'$\rho_w$ (kg / $m^3$)', title=r'$\rho_w(z)$', yscl='log')
     plt.ion()
@@ -239,7 +263,7 @@ if(to_draw_dist):
         #ax.legend()
         fig_dist.suptitle(r'$t$ \in $[' + my.f2str(time[hist_av_inds[ti, 0]]) + ' - ' + my.f2str(time[hist_av_inds[ti, 1] - 1]) + ']$ (ns)')
         plt.draw()
-        plt.pause(0.001)    
+        plt.pause(0.001)
         input("Press Enter to continue...")
 else:
     plt.show()

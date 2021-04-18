@@ -13,7 +13,7 @@ constraints              = h-bonds ;
 
 gen-vel                  = yes ;
 gen-temp                 = 298.15 ;
-gen-seed                 = 0 ;
+gen-seed                 = 5 ;
 
 cutoff-scheme            = Verlet ;
 
@@ -31,7 +31,7 @@ ref-t                    = 298.15 ;
 nhchainlength            = 1 ;
 
 pcoupl                   = Parrinello-Rahman ;
-pcoupltype               = anisotropic ;
+pcoupltype               = semiisotropic ;
 tau_p                    = 128;
-compressibility          = 3e-4  3e-4 3e-14 0 0 0 ;
-ref_p                    = 0.02  0.02 0.02  0 0 0 ;
+compressibility          = 3e-4 0 ;
+ref_p                    = 0.02 0.02 ;
