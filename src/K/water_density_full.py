@@ -43,7 +43,11 @@ def parse_xvg(xvg_data, fields):
     N_f = len(fields)
     res = np.zeros((N_f, N_frames))
     for fi in range(N_f):
-        ind = np.where([name == fields[fi] for name in xvg_data.names])[0]
+        for fj in range(len(fields[fi])):
+            ind = np.where([name == fields[fi][fj] for name in xvg_data.names])[0]
+            if(ind.size == 1):
+                break
+            
         if(ind.size == 1):
             res[fi, :] = xvg_data.array[ind[0] + 1, :]   # +1 because 0th column is time and it's not in fields
         else:
@@ -60,11 +64,11 @@ res_path = os.path.join(root_path, 'res')
 
 # ============== arg parse =================
 
-[Tmp, recomp, Zstep, avg_hist_time, extra_water, to_save_pics, to_draw_pics, comprZ], _ = \
-    my.parse_args(sys.argv[1:], ['-temp', '-recomp', '-Zstep', '-avg_time', '-extra_water', '-save_pics', '-draw_pics', '-comprZ'], \
-                  possible_values=[None, ['0', '1'], None, None, None, ['0', '1'], ['0', '1'], None], \
-                  possible_arg_numbers=[[1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]], \
-                  default_values=[None, ['0'], ['0.5'], ['2.5'], ['0'], ['0'], ['1'], ['10']])
+[Tmp, recomp, Zstep, avg_hist_time, extra_water, to_save_pics, to_draw_pics, comprZ, model_id], _ = \
+    my.parse_args(sys.argv[1:], ['-temp', '-recomp', '-Zstep', '-avg_time', '-extra_water', '-save_pics', '-draw_pics', '-comprZ', '-id'], \
+                  possible_values=[None, ['0', '1'], None, None, None, ['0', '1'], ['0', '1'], None, None], \
+                  possible_arg_numbers=[[1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]], \
+                  default_values=[None, ['0'], ['0.5'], ['5'], ['0'], ['0'], ['1'], ['10'], ['0']])
 Tmp = float(Tmp)
 recomp = (recomp[0] == '1')
 Zstep = float(Zstep[0])
@@ -73,6 +77,7 @@ extra_water = int(extra_water[0])
 to_save_pics = (to_save_pics[0] == '1')
 to_draw_pics = (to_draw_pics[0] == '1') or to_save_pics
 comprZ = float(comprZ[0])
+model_id = int(model_id[0])
 
 # ================ params =================
 T_C2K = 273.15
@@ -86,13 +91,16 @@ verbose = True
 to_draw_dist = to_draw_pics and False
 to_draw_P = to_draw_pics and True
 to_draw_L = to_draw_pics and True
+clr_x = my.colors[0]
+clr_y = my.colors[3]
+clr_z = my.colors[2]
 
-step_hist_av = int(round(avg_hist_time / Dt))
-rho_atm = 101000 * 0.018 / (8.31 * (Tmp + T_C2K))
+step_hist_av = int(round(avg_hist_time / Dt / 2)) * 2 + 1
+rho_atm = 101000 * 0.02 * 0.018 / (8.31 * (Tmp + T_C2K))
 supercell_str = ''.join([str(x) for x in supercell])
 
 # =================== per-model paths ======================
-model_name = 'flucts_t4p2005_temp' + my.f2str(Tmp) + '_extW' + str(extra_water) + '_comprZ' + str(comprZ)
+model_name = 'flucts_t4p2005_temp' + my.f2str(Tmp) + '_extW' + str(extra_water) + '_AnisoXYComprZ' + str(comprZ) + '_id' + str(model_id)
 model_path = os.path.join(run_path, model_name)
 traj_filepath = os.path.join(model_path, 'npt.xtc')
 xvg_filepath = os.path.join(model_path, 'npt.xvg')
@@ -101,7 +109,7 @@ init_pdb_filepath = os.path.join(model_path, 'em_nojump.pdb')
 wcrd_filepath = os.path.join(model_path, 'water_coord.npy')
 xvg_bin_filepath = os.path.join(model_path, 'xvg.pkl')
 init_pdb_bin_filepath = os.path.join(model_path, 'initPDB.pkl')
-_filepath = os.path.join(model_path, 'npt.xtc')
+#_filepath = os.path.join(model_path, 'npt.xtc')
 
 data_files = [xvg_bin_filepath, init_pdb_bin_filepath, wcrd_filepath]
 recomp = recomp or not files_exist(data_files)
@@ -156,8 +164,9 @@ if(verbose):
     print('w_crd shape: ', w_crd.shape)
 
 # =================== process ======================
-Lbox = parse_xvg(xvg_file, ['Box-X', 'Box-Y', 'Box-Z'])
-Pbox = parse_xvg(xvg_file, ['Pres-XX', 'Pres-YY', 'Pres-ZZ'])
+Lbox = parse_xvg(xvg_file, [['Box-X', 'Box-XX'], ['Box-Y', 'Box-YY'], ['Box-Z', 'Box-ZZ']])
+Pbox = parse_xvg(xvg_file, [['Pres-XX'], ['Pres-YY'], ['Pres-ZZ']])
+Ptbox = parse_xvg(xvg_file, [['Pres-XY', 'Pres-YX'], ['Pres-XZ', 'Pres-ZX'], ['Pres-YZ', 'Pres-ZY']])
 time_xvg = xvg_file.array[0] * 1e-3
 dt_xvg = abs(time_xvg[1] - time_xvg[0])
 
@@ -199,20 +208,25 @@ for ti in range(N_av):
     d_gas_rho[ti] = np.sum(d_water_hist_average[ti, gas_Z_ind] ** 2) / np.sum(gas_Z_ind)
 
 if(to_draw_pics):
-    fig, ax = my.get_fig(r'$t$ (ns)', r'$\rho_w$ (kg / $m^3$)', title=r'$\rho_w(t)$; $T$ = ' + my.f2str(Tmp) + r' $C^\circ$; $\rho_{sat} = ' + my.f2str(rho_atm) + '$ kg / $m^3$')
+    fig, ax = my.get_fig(r'$t$ (ns)', r'$\rho_w$ (kg / $m^3$)', \
+                        title=r'$\rho_w(t)$; $T$ = ' + my.f2str(Tmp) + r' $C^\circ$; $\beta = ' + my.f2str(comprZ) + '$ (1/bar)')
     t_draw = (time[hist_av_inds[:, 0]] + time[hist_av_inds[:, 1] - 1]) / 2
-    ax.errorbar(t_draw, gas_rho, d_gas_rho, fmt='o', markerfacecolor='None')
+    ax.errorbar(t_draw, gas_rho, d_gas_rho, fmt='o', markerfacecolor='None', label='data')
+    ax.plot([min(t_draw), max(t_draw)], [rho_atm] * 2, '--', label=r'$\rho_{sat}$')
+    ax.legend()
     
     if(to_save_pics):
         pic_rho_t_filepath = os.path.join(model_path, 'rho(t).png')
         fig.savefig(pic_rho_t_filepath)
 
 if(to_draw_L):
-    fig_z, ax_z = my.get_fig(r'$t$ (ns)', r'$L_z$ (nm)', title=r'$L_z(t)$; $\beta = ' + my.f2str(comprZ) + ' (1/bar)$')
-    ax_z.plot(time_xvg, Lbox[2, :])
-    fig_xy, ax_xy = my.get_fig(r'$t$ (ns)', r'$L$ (nm)', title=r'$L(t)$; $T = ' + my.f2str(comprZ) + ' (1/bar)$')
-    ax_xy.plot(time_xvg, Lbox[0, :], label=r'$L_x$')
-    ax_xy.plot(time_xvg, Lbox[1, :], label=r'$L_y$')
+    fig_z, ax_z = my.get_fig(r'$t$ (ns)', r'$L_z$ (nm)', title=r'$L_z(t)$; $T = ' + my.f2str(Tmp) + r'$ $C^\circ$; $\beta = ' + my.f2str(comprZ) + r'$ (1/bar)')
+    ax_z.plot(time_xvg, Lbox[2, :], label=r'$L_x$', color=clr_z)
+    ax_z.legend()
+    
+    fig_xy, ax_xy = my.get_fig(r'$t$ (ns)', r'$L$ (nm)', title=r'$L(t)$; $T = ' + my.f2str(Tmp) + r'$ $C^\circ$; $\beta = ' + my.f2str(comprZ) + '$ (1/bar)')
+    ax_xy.plot(time_xvg, Lbox[0, :], label=r'$L_x$', color=clr_x)
+    ax_xy.plot(time_xvg, Lbox[1, :], label=r'$L_y$', color=clr_y)
     ax_xy.legend()
     
     if(to_save_pics):
@@ -222,24 +236,33 @@ if(to_draw_L):
         fig_xy.savefig(pic_Lxy_t_filepath)
 
 if(to_draw_P):
-    fig_Pz, ax_Pz = my.get_fig(r'$t$ (ns)', r'$P_z$ (nm)', title=r'$P_z(t)$; $T = ' + my.f2str(Tmp) + ' C^\circ$')
-    ax_Pz.plot(time_xvg, Pbox[2, :], color = my.colors[2], alpha=0.1, label='no avg')
-    ax_Pz.plot(time_xvg, rollavg_convolve_edges(Pbox[2, :], 51), color = my.colors[2], alpha=0.5, label='avg = ' + my.f2str(dt_xvg * 51) + ' ns')
-    ax_Pz.plot(time_xvg, rollavg_convolve_edges(Pbox[2, :], 251), color = my.colors[2], label='avg = ' + my.f2str(dt_xvg * 251) + ' ns')
-
-    fig_Pxy, ax_Pxy = my.get_fig(r'$t$ (ns)', r'$P$ (bar)', title=r'$P(t)$; $T = ' + my.f2str(Tmp) + ' C^\circ$')
-    ax_Pxy.plot(time_xvg, Pbox[1, :], color = my.colors[1], alpha=0.1, label='no avg')
-    ax_Pxy.plot(time_xvg, rollavg_convolve_edges(Pbox[1, :], 51), color = my.colors[1], alpha=0.5, label='avg = ' + my.f2str(dt_xvg * 51) + ' ns')
-    ax_Pxy.plot(time_xvg, rollavg_convolve_edges(Pbox[1, :], 251), color = my.colors[1], label=r'$P_y$; avg = ' + my.f2str(dt_xvg * 251) + ' ns')
-    ax_Pxy.plot(time_xvg, Pbox[0, :], color = my.colors[0], alpha=0.1, label='no avg')
-    ax_Pxy.plot(time_xvg, rollavg_convolve_edges(Pbox[0, :], 51), color = my.colors[0], alpha=0.5, label='avg = ' + my.f2str(dt_xvg * 51) + ' ns')
-    ax_Pxy.plot(time_xvg, rollavg_convolve_edges(Pbox[0, :], 251), color = my.colors[0], label=r'$P_y$; avg = ' + my.f2str(dt_xvg * 251) + ' ns')
-    ax_Pxy.legend()
+    def plot_pressure(ax, t, P, dt, title, clr, av1=51, av2=251, lw=2):
+        ax.plot(t, P, color = clr, alpha=0.1, label = title + 'no avg', linewidth=lw)
+        ax.plot(t, rollavg_convolve_edges(P, av1), color = clr, alpha=0.5, label='avg = ' + my.f2str(dt * av1) + ' ns', linewidth=lw)
+        ax.plot(t, rollavg_convolve_edges(P, av2), color = clr, label='avg = ' + my.f2str(dt * av2) + ' ns', linewidth=lw)
     
-    fig_Pav, ax_Pav = my.get_fig(r'$t$ (ns)', r'$P$ (bar)', title=r'$P(t)$; $T = ' + my.f2str(Tmp) + ' C^\circ$')
-    ax_Pav.plot(time_xvg, rollavg_convolve_edges(Pbox[0, :], 251), color = my.colors[0], label=r'$P_x$; avg = ' + my.f2str(dt_xvg * 251) + ' ns')
-    ax_Pav.plot(time_xvg, rollavg_convolve_edges(Pbox[1, :], 251), color = my.colors[1], label=r'$P_y$; avg = ' + my.f2str(dt_xvg * 251) + ' ns')
-    ax_Pav.plot(time_xvg, rollavg_convolve_edges(Pbox[2, :], 251), color = my.colors[2], label=r'$P_z$; avg = ' + my.f2str(dt_xvg * 251) + ' ns')
+    fig_Pz, ax_Pz = my.get_fig(r'$t$ (ns)', r'$P_z$ (nm)', title=r'$P_z(t)$; $T = ' + my.f2str(Tmp) + r' C^\circ; \beta = ' + my.f2str(comprZ) + r'$ (1/bar)')
+    plot_pressure(ax_Pz, time_xvg, Pbox[2, :], dt_xvg, '$P_z$; ', clr_z, av2=step_hist_av)
+    ax_Pz.legend()
+
+    fig_Pxy, ax_Pxy = my.get_fig(r'$t$ (ns)', r'$P$ (bar)', title=r'$P(t)$; $T = ' + my.f2str(Tmp) + r' C^\circ; \beta = ' + my.f2str(comprZ) + r'$ (1/bar)')
+    plot_pressure(ax_Pxy, time_xvg, Pbox[1, :], dt_xvg, '$P_y$; ', clr_y, av2=step_hist_av)
+    plot_pressure(ax_Pxy, time_xvg, Pbox[0, :], dt_xvg, '$P_x$; ', clr_x, av2=step_hist_av)
+    plot_pressure(ax_Pxy, time_xvg, Ptbox[1, :], dt_xvg, '$P_{xz}$; ', tuple([c * 0.8 for c in clr_x]), av2=step_hist_av, lw=1)
+    plot_pressure(ax_Pxy, time_xvg, Ptbox[2, :], dt_xvg, '$P_{yz}$; ', tuple([c * 0.8 for c in clr_y]), av2=step_hist_av, lw=1)    
+    ax_Pxy.legend()
+        
+    fig_Pav, ax_Pav = my.get_fig(r'$t$ (ns)', r'$P$ (bar)', title=r'$P(t)$; $T = ' + my.f2str(Tmp) + r' C^\circ; \beta = ' + my.f2str(comprZ) + r'$ (1/bar); avg = ' + my.f2str(dt_xvg * step_hist_av) + ' ns')
+    ax_Pav.plot(time_xvg, rollavg_convolve_edges(Pbox[0, :], step_hist_av), \
+                color=clr_x, label=r'$P_x$')
+    ax_Pav.plot(time_xvg, rollavg_convolve_edges(Pbox[1, :], step_hist_av), \
+                color=clr_y, label=r'$P_y$')
+    ax_Pav.plot(time_xvg, rollavg_convolve_edges(Pbox[2, :], step_hist_av), \
+                color=clr_z, label=r'$P_z$')
+    ax_Pav.plot(time_xvg, rollavg_convolve_edges(Ptbox[1, :], step_hist_av), \
+                color=tuple([c * 0.8 for c in clr_x]), label=r'$P_{xz}$', linewidth=1)
+    ax_Pav.plot(time_xvg, rollavg_convolve_edges(Ptbox[2, :], step_hist_av), \
+                color=tuple([c * 0.8 for c in clr_y]), label=r'$P_{yz}$', linewidth=1)
     ax_Pav.legend()
 
     if(to_save_pics):

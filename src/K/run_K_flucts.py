@@ -28,7 +28,7 @@ N_gpus = 1
 T_C2K = 273.15
 dt = 2e-6    # 1 fs = 1e-6 ns
 compr = 0.0003
-time = 35
+time = 65
 omp_default = multiprocessing.cpu_count()
 equil_maxsol_poly = [-2.9516, 1117.2]   # maxsol = np.polyval(equil_maxsol_poly, T), [T] = C (not K)
 temps = np.array([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
@@ -47,8 +47,8 @@ possible_preproc = [no_preproc, preproc_if_permitted, preproc_force, preproc_if_
 [omp_cores, mpi_cores, gpu_id, do_mainrun, preproc_mode, param_ids, extra_water, compressibility_Z], _ = \
     my.parse_args(sys.argv[1:], ['-omp', '-mpi', '-gpu_id', '-do_mainrun', '-preproc_mode', '-param_ids', '-extra_water', '-comprZ'], \
                   possible_values=[possible_omps, None, possible_gpu_ids, ['no', 'yes'], possible_preproc, None, None, None], \
-                  possible_arg_numbers=[[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]], \
-                  default_values=[[str(omp_default)], ['0'], ['-1'], ['yes'], [preproc_force], ['0'], ['0'], ['0']])
+                  possible_arg_numbers=[[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], None, [0, 1], [0, 1]], \
+                  default_values=[[str(omp_default)], ['0'], ['-1'], ['yes'], [preproc_if_needed], ['0'], ['0'], ['0']])
 param_ids = [int(i) for i in param_ids]
 omp_cores = int(omp_cores[0])
 mpi_cores = int(mpi_cores[0])
@@ -70,7 +70,7 @@ for _ in range(1):
     maxsol = int((round(np.polyval(equil_maxsol_poly, temp)) + extra_water) * 2)
     nsteps = int(round(time / dt))
     
-    model_name = 'flucts_t4p2005_temp' + my.f2str(temp) + '_extW' + str(extra_water) + '_AnisoComprZ' + str(compressibility_Z)
+    model_name = 'flucts_t4p_temp' + my.f2str(temp) + '_extW' + str(extra_water) + '_AnisoXYComprZ' + str(compressibility_Z) + '_id' + str(param_ids[1])
     mdp_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.mdp')
     eql_filepath = os.path.join(run_path, model_name, eql_mdp_filename_base + '.mdp')
     checkpoint_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.cpt')
@@ -95,12 +95,13 @@ for _ in range(1):
         print('Skipping preproc')
     else:
         print('Running the model from the initial "' + init_pdb_filename + '"')
+        #sys.exit(1)
         my.run_it('./clear_restore.sh ' + model_name)
         my.run_it(['python', 'change_mdp.py', '-in', mdp_filepath, '-out', mdp_filepath, '-flds', 'ref-t', str(temp + T_C2K), \
                                                                                                   'nsteps', str(nsteps), \
                                                                                                   'gen-temp', str(temp + T_C2K), \
-                                                                                                  'gen-seed', str(param_ids[0]),
-                                                                                                  'compressibility', '3e-4 3e-4 ' + str(compressibility_Z) + ' 0 0 0'])
+                                                                                                  'gen-seed', str(param_ids[1]),
+                                                                                                  'compressibility', '3e-4 3e-4 ' + str(compressibility_Z) + ' 3e-4 0 0'])
 #                                                                                                  'compressibility', '3e-4 ' + str(compressibility_Z)])
         my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1', '1', '2', str(maxsol), init_pdb_filename]))
         my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1iee_wions', minimE_filename_base, mdrun_mode, '1']))
@@ -110,4 +111,4 @@ for _ in range(1):
         my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), minimE_filename_base, main_mdp_filename_base, mdrun_mode, '0' if skip else '1']))
         my.run_it(' '.join(['./postproc_flucts.sh', model_name]))
 
-#sbatch -J gromacs -p max1n -N 1 --ntasks-per-node=1 --wrap="python run_K_flucts.py -param_ids 7 -omp 12 -mpi 1 -extra_water 30"
+#sbatch -J gmx -p max1n -N 1 --ntasks-per-node=1 --wrap="python run_K_flucts.py -param_ids 7 -omp 12 -mpi 1 -extra_water 30"

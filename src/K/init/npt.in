@@ -1,13 +1,16 @@
 15
-17
-21
-22
 18
 19
 20
-34
+21
+22
+23
+37
 38
+39
+41
 42
+45
 0
 
 #
@@ -22,11 +25,18 @@
 38 - Pyy
 42 - Pzz
 
-# old ones, for desmos I suppose
-5
-9
-11
-15
-16
-18
+#
+15 - Temperature
+18 - Lx
+19 - Ly
+20 - Lz
+21 - Lxy
+22 - Lzx
+23 - Lzy
+37 - Pxx
+38 - Pxy
+39 - Pxz
+41 - Pyy
+42 - Pyz
+45 - Pzz
 0
