@@ -64,11 +64,11 @@ res_path = os.path.join(root_path, 'res')
 
 # ============== arg parse =================
 
-[Tmp, recomp, Zstep, avg_hist_time, extra_water, to_save_pics, to_draw_pics, comprZ, model_id], _ = \
-    my.parse_args(sys.argv[1:], ['-temp', '-recomp', '-Zstep', '-avg_time', '-extra_water', '-save_pics', '-draw_pics', '-comprZ', '-id'], \
-                  possible_values=[None, ['0', '1'], None, None, None, ['0', '1'], ['0', '1'], None, None], \
-                  possible_arg_numbers=[[1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]], \
-                  default_values=[None, ['0'], ['0.5'], ['5'], ['0'], ['0'], ['1'], ['10'], ['0']])
+[Tmp, recomp, Zstep, avg_hist_time, extra_water, to_save_pics, to_draw_pics, comprZ, model_id, do_dist, do_P, do_L], _ = \
+    my.parse_args(sys.argv[1:], ['-temp', '-recomp', '-Zstep', '-avg_time', '-extra_water', '-save_pics', '-draw_pics', '-comprZ', '-id', '-do_dist', '-do_P', '-do_L'], \
+                  possible_values=[None, ['0', '1'], None, None, None, ['0', '1'], ['0', '1'], None, None, ['0', '1'], ['0', '1'], ['0', '1']], \
+                  possible_arg_numbers=[[1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]], \
+                  default_values=[None, ['0'], ['0.5'], ['5'], ['0'], ['0'], ['1'], ['10'], ['0'], ['0'], ['1'], ['1']])
 Tmp = float(Tmp)
 recomp = (recomp[0] == '1')
 Zstep = float(Zstep[0])
@@ -78,6 +78,9 @@ to_save_pics = (to_save_pics[0] == '1')
 to_draw_pics = (to_draw_pics[0] == '1') or to_save_pics
 comprZ = float(comprZ[0])
 model_id = int(model_id[0])
+do_dist = (do_dist[0] == '1')
+do_P = (do_P[0] == '1')
+do_L = (do_L[0] == '1')
 
 # ================ params =================
 T_C2K = 273.15
@@ -88,9 +91,6 @@ gas_max_rho = 0.1
 readframes_timestep = 1
 supercell = np.array([1, 1, 2], dtype=np.intc)
 verbose = True
-to_draw_dist = to_draw_pics and False
-to_draw_P = to_draw_pics and True
-to_draw_L = to_draw_pics and True
 clr_x = my.colors[0]
 clr_y = my.colors[3]
 clr_z = my.colors[2]
@@ -219,7 +219,7 @@ if(to_draw_pics):
         pic_rho_t_filepath = os.path.join(model_path, 'rho(t).png')
         fig.savefig(pic_rho_t_filepath)
 
-if(to_draw_L):
+if(do_L):
     fig_z, ax_z = my.get_fig(r'$t$ (ns)', r'$L_z$ (nm)', title=r'$L_z(t)$; $T = ' + my.f2str(Tmp) + r'$ $C^\circ$; $\beta = ' + my.f2str(comprZ) + r'$ (1/bar)')
     ax_z.plot(time_xvg, Lbox[2, :], label=r'$L_x$', color=clr_z)
     ax_z.legend()
@@ -235,7 +235,7 @@ if(to_draw_L):
         fig_z.savefig(pic_Lz_t_filepath)
         fig_xy.savefig(pic_Lxy_t_filepath)
 
-if(to_draw_P):
+if(do_P):
     def plot_pressure(ax, t, P, dt, title, clr, av1=51, av2=251, lw=2):
         ax.plot(t, P, color = clr, alpha=0.1, label = title + 'no avg', linewidth=lw)
         ax.plot(t, rollavg_convolve_edges(P, av1), color = clr, alpha=0.5, label='avg = ' + my.f2str(dt * av1) + ' ns', linewidth=lw)
@@ -273,21 +273,28 @@ if(to_draw_P):
         fig_Pxy.savefig(pic_Pxy_t_filepath)
         fig_Pav.savefig(pic_Pav_t_filepath)
 
-if(to_draw_dist):
+if(do_dist):
     fig_dist, ax_dist = my.get_fig(r'z (nm)', r'$\rho_w$ (kg / $m^3$)', title=r'$\rho_w(z)$', yscl='log')
     plt.ion()
     plt.show()
+    y_lims = [np.amin(water_hist_average) * 0.9, np.amax(water_hist_average) * 1.1]
     for ti in range(N_av):
         ax_dist.clear()
         plt.yscale('log')
         ax_dist.bar(Zcentrs, water_hist_average[ti, :], width=Zstep, \
                facecolor=my.colors[4], edgecolor=my.colors[4])
-        ax_dist.plot([min(Zcentrs), max(Zcentrs)], [rho_atm] * 2, color=my.colors[1], label=r'$x$')
-        #ax.legend()
-        fig_dist.suptitle(r'$t$ \in $[' + my.f2str(time[hist_av_inds[ti, 0]]) + ' - ' + my.f2str(time[hist_av_inds[ti, 1] - 1]) + ']$ (ns)')
+        ax_dist.plot([min(Zcentrs), max(Zcentrs)], [rho_atm] * 2, color=my.colors[1], label=r'$\rho_{sat}$')
+        ax_dist.set_ylim(y_lims)            
+
+        ax_dist.legend()
+        fig_dist.suptitle(r'$t \in [' + my.f2str(time[hist_av_inds[ti, 0]]) + ' - ' + my.f2str(time[hist_av_inds[ti, 1] - 1]) + ']$ (ns)')
         plt.draw()
-        plt.pause(0.001)
-        input("Press Enter to continue...")
+        if(to_save_pics):
+            pic_rho_dist_filepath = os.path.join(model_path, 'rho_dist_t' + my.f2str(time[hist_av_inds[ti, 0]]) + '_' + my.f2str(time[hist_av_inds[ti, 1] - 1]) + '.png')
+            fig_dist.savefig(pic_rho_dist_filepath)
+        else:
+            plt.pause(0.001)
+            input("Press Enter to continue...")
 else:
     plt.show()
 
