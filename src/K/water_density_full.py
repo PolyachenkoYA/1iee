@@ -172,9 +172,11 @@ dt_xvg = abs(time_xvg[1] - time_xvg[0])
 
 w_z = w_crd[:, :, 2]
 Zmin = np.min(w_z[:])
+#Zmin = 0
 Zmax = np.max(w_z[:])
+#Zmax = np.max(Lbox[2, :])
 L = Zmax - Zmin
-N_Zbins = int(L / Zstep)
+N_Zbins = int(np.ceil(L / Zstep))
 Zstep = L / N_Zbins
 Zbins = np.arange(N_Zbins) * Zstep + Zmin
 Zbins = np.append(Zbins, Zmax)
@@ -277,10 +279,12 @@ if(do_dist):
     fig_dist, ax_dist = my.get_fig(r'z (nm)', r'$\rho_w$ (kg / $m^3$)', title=r'$\rho_w(z)$', yscl='log')
     plt.ion()
     plt.show()
-    y_lims = [np.amin(water_hist_average) * 0.9, np.amax(water_hist_average) * 1.1]
+    y_lims = [np.amin(water_hist_average[water_hist_average > 0]) * 0.9, np.amax(water_hist_average) * 1.1]
+    #print(Zmin)
     for ti in range(N_av):
         ax_dist.clear()
         plt.yscale('log')
+        #print(np.transpose(np.array([Zcentrs, water_hist_average[ti, :]])))
         ax_dist.bar(Zcentrs, water_hist_average[ti, :], width=Zstep, \
                facecolor=my.colors[4], edgecolor=my.colors[4])
         ax_dist.plot([min(Zcentrs), max(Zcentrs)], [rho_atm] * 2, color=my.colors[1], label=r'$\rho_{sat}$')
