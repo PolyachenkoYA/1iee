@@ -100,7 +100,8 @@ rho_atm = 101000 * 0.02 * 0.018 / (8.31 * (Tmp + T_C2K))
 supercell_str = ''.join([str(x) for x in supercell])
 
 # =================== per-model paths ======================
-model_name = 'flucts_t4p2005_temp' + my.f2str(Tmp) + '_extW' + str(extra_water) + '_AnisoXYComprZ' + str(comprZ) + '_id' + str(model_id)
+#model_name = 'flucts_t4p2005_temp' + my.f2str(Tmp) + '_extW' + str(extra_water) + '_AnisoXYComprZ' + str(comprZ) + '_id' + str(model_id)
+model_name = 'flucts_t4p2005_temp' + my.f2str(Tmp) + '_extW' + str(extra_water) + '_comprZ' + str(comprZ)
 model_path = os.path.join(run_path, model_name)
 traj_filepath = os.path.join(model_path, 'npt.xtc')
 xvg_filepath = os.path.join(model_path, 'npt.xvg')
@@ -210,11 +211,21 @@ for ti in range(N_av):
     d_gas_rho[ti] = np.sum(d_water_hist_average[ti, gas_Z_ind] ** 2) / np.sum(gas_Z_ind)
 
 if(to_draw_pics):
-    fig, ax = my.get_fig(r'$t$ (ns)', r'$\rho_w$ (kg / $m^3$)', \
-                        title=r'$\rho_w(t)$; $T$ = ' + my.f2str(Tmp) + r' $C^\circ$; $\beta = ' + my.f2str(comprZ) + '$ (1/bar)')
+    def reg_mean(y, n=1, sgm=1):
+        for i in range(n):
+            y = y[np.abs(y - np.mean(y)) < np.std(y) * sgm]
+        return np.mean(y)
+
+    draw_units = 1e3   # kg to g
+    fig, ax = my.get_fig(r'$t$ (ns)', r'$\rho_w$ (g / $m^3$)', \
+                        title=r'$\rho_w(t)$; $T$ = ' + my.f2str(Tmp) + r' $C^\circ$; $w_{extra} = ' + str(extra_water) + '$ (mols/chain)')
     t_draw = (time[hist_av_inds[:, 0]] + time[hist_av_inds[:, 1] - 1]) / 2
-    ax.errorbar(t_draw, gas_rho, d_gas_rho, fmt='o', markerfacecolor='None', label='data')
-    ax.plot([min(t_draw), max(t_draw)], [rho_atm] * 2, '--', label=r'$\rho_{sat}$')
+    gas_rho_stab = my.regularize(gas_rho[t_draw > 25], n=1, sgm=1)
+    rho_mean_stab = np.mean(gas_rho_stab)
+    d_rho_mean_stab = np.std(gas_rho_stab)
+    ax.errorbar(t_draw, gas_rho * draw_units, d_gas_rho * draw_units, fmt='o', markerfacecolor='None', label='data')
+    ax.plot([min(t_draw), max(t_draw)], [rho_atm * draw_units] * 2, '--', label=r'$\rho_{sat} = ' + my.f2str(rho_atm * draw_units) + '$')
+    ax.plot([min(t_draw), max(t_draw)], [rho_mean_stab * draw_units] * 2, '--', label=r'$\rho_{reg} = ' + my.f2str(rho_mean_stab * draw_units) + ' \pm ' + my.f2str(d_rho_mean_stab * draw_units) + '$')
     ax.legend()
     
     if(to_save_pics):

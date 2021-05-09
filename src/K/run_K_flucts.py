@@ -28,7 +28,7 @@ N_gpus = 1
 T_C2K = 273.15
 dt = 2e-6    # 1 fs = 1e-6 ns
 compr = 0.0003
-time = 65
+time = 100
 omp_default = multiprocessing.cpu_count()
 equil_maxsol_poly = [-2.9516, 1117.2]   # maxsol = np.polyval(equil_maxsol_poly, T), [T] = C (not K)
 temps = np.array([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
@@ -67,7 +67,8 @@ temp = temps[param_ids[0]]
 #time = times[param_ids[2]]
 #for Ptau_i, P_tau in enumerate(P_taus[param_ids[3:]]):
 for _ in range(1):
-    maxsol = int((round(np.polyval(equil_maxsol_poly, temp)) + extra_water) * 2)
+    #maxsol = int((round(np.polyval(equil_maxsol_poly, temp)) + extra_water) * 2)   # +180 to compensate for water that is reaplced with ions, but it's clreafy included in the polyval
+    maxsol = extra_water * 2 + 180
     nsteps = int(round(time / dt))
     
     model_name = 'flucts_t4p2005_temp' + my.f2str(temp) + '_extW' + str(extra_water) + '_comprZ' + str(compressibility_Z)
@@ -104,6 +105,7 @@ for _ in range(1):
                                                                                                   'compressibility', '3e-4 3e-4 ' + str(compressibility_Z) + ' 3e-4 0 0'])
 #                                                                                                  'compressibility', '3e-4 ' + str(compressibility_Z)])
         my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1', '1', '2', str(maxsol), init_pdb_filename]))
+        #sys.exit(1)
         my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1iee_wions', minimE_filename_base, mdrun_mode, '1']))
         my.run_it(' '.join(['./save_initial_nojump.sh', model_name, minimE_filename_base]))
 
