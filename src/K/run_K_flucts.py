@@ -28,7 +28,7 @@ N_gpus = 1
 T_C2K = 273.15
 dt = 2e-6    # 1 fs = 1e-6 ns
 compr = 0.0003
-time = 100
+time = 1000
 omp_default = multiprocessing.cpu_count()
 equil_maxsol_poly = [-2.9516, 1117.2]   # maxsol = np.polyval(equil_maxsol_poly, T), [T] = C (not K)
 temps = np.array([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
@@ -71,7 +71,7 @@ for _ in range(1):
     maxsol = extra_water * 2 + 180
     nsteps = int(round(time / dt))
     
-    model_name = 'flucts_t4p2005_temp' + my.f2str(temp) + '_extW' + str(extra_water) + '_comprZ' + str(compressibility_Z)
+    model_name = 'flucts_t4p2005_temp' + my.f2s(temp) + '_extW' + str(extra_water) + '_comprZ' + str(compressibility_Z)
     mdp_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.mdp')
     eql_filepath = os.path.join(run_path, model_name, eql_mdp_filename_base + '.mdp')
     checkpoint_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.cpt')
