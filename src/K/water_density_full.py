@@ -57,7 +57,9 @@ def parse_xvg(xvg_data, fields):
 
 
 # =============== global paths ================
-root_path = my.git_root_path()
+#root_path = my.git_root_path()
+with open('git_root_path', 'r') as f:
+    root_path = f.readline()
 run_path = os.path.join(root_path, 'run')
 exe_path = os.path.join(root_path, 'src', 'K')
 res_path = os.path.join(root_path, 'res')
@@ -333,7 +335,7 @@ if(do_dist):
         ax_dist.legend()
         fig_dist.suptitle(r'$\rho_w(z)$' + \
                           r'; $t \in [' + my.f2s(time[hist_av_inds[ti, 0]]) + r' - ' + my.f2s(time[hist_av_inds[ti, 1] - 1]) + r']$ (ns)' + \
-                          r'; $H_2 O_{ext}$ = ' + str(extra_water) + \   
+                          r'; $H_2 O_{ext}$ = ' + str(extra_water) + \
                           r'; T = ' + my.f2s(Tmp))   # + 1014 - 180 for old w_extra
         plt.draw()
         if(to_save_pics):
