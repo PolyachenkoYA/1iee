@@ -1,7 +1,9 @@
 clear; close all;
 
-TK2C = 273.15;
 T0 = 35;
+T0 = 18;
+
+TK2C = 273.15;
 T = T0 + TK2C;
 rho_sat = get_rho_sat(get_opt_rho_sat(TK2C, 0), T);
 

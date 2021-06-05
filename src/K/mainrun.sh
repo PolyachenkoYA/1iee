@@ -5,8 +5,8 @@ gmx_serial=gmx_mpi
 gmx_serial=gmx_ser_20
 
 gmx_mdrun=gmx_mpi
-gmx_mdrun=mdrun_mpionly_20
-#gmx_mdrun=gmx_mpi2
+gmx_mdrunonly=mdrun_mpionly_20
+gmx_mdrun=gmx_mpi2
 #gmx_mdrun=gmx_sermpi_20
 #gmx_mdrun="$gmx_serial"
 
@@ -31,8 +31,8 @@ run_path=run/$job_id
 exe_path=src/K
 timeout=24
 
-cmd="srun --ntasks-per-node=$ompN $gmx_mdrun mdrun -deffnm $name -ntomp 1 -cpi $name.cpt -cpo $name.cpt -pin off"
-#cmd="srun --ntasks-per-node=$ompN $gmx_mdrun -v -deffnm $name -ntomp $ompN -cpi $name.cpt -cpo $name.cpt -pin off"
+cmd="srun --ntasks-per-node=$ompN $gmx_mdrun mdrun -v -deffnm $name -ntomp 1 -cpi $name.cpt -cpo $name.cpt -pin off"
+#cmd="srun --ntasks-per-node=1 $gmx_mdrunonly -v -deffnm $name -ntomp $ompN -cpi $name.cpt -cpo $name.cpt -pin off"
 if [ $gpu_id -ge -1 ]
 then
     cmd="$cmd -nb gpu"
@@ -66,14 +66,16 @@ fi
 
 if [[ "$run_mode" == "serial" ]]
 then
-    $gmx_serial mdrun $cmd
+    echo "serial run not supported"
+    #$gmx_serial mdrun $cmd
 elif [[ "$run_mode" == "slurm" ]]
 then
     echo $cmd
     $cmd
 elif [[ "$run_mode" == "trun" ]]
 then
-    trun -m 1 -ppn=$mpiN $gmx_mdrun mdrun $cmd
+    echo "trun not supported"
+    #trun -m 1 -ppn=$mpiN $gmx_mdrun mdrun $cmd
 else
     echo "wrong run_mode: $run_mode"
 fi

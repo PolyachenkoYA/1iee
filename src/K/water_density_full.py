@@ -99,7 +99,8 @@ clr_z = my.colors[2]
 
 step_hist_av = int(round(avg_hist_time / Dt / 2)) * 2 + 1
 rho_atm = 101000 * 0.02 * 0.018 / (8.31 * (Tmp + T_C2K))
-rho_atm = 9.45 / 1000
+sat_params = [27.373, 5973.2, 1.002]
+rho_atm = np.exp(sat_params[0] - sat_params[1] / (Tmp + T_C2K)) / (Tmp + T_C2K)**sat_params[2] / 1000
 supercell_str = ''.join([str(x) for x in supercell])
 
 # =================== per-model paths ======================

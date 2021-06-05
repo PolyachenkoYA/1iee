@@ -28,7 +28,7 @@ N_gpus = 1
 T_C2K = 273.15
 dt = 2e-6    # 1 fs = 1e-6 ns
 compr = 0.0003
-time = 1
+time = 1000
 omp_default = multiprocessing.cpu_count()
 equil_maxsol_poly = [-2.9516, 1117.2]   # maxsol = np.polyval(equil_maxsol_poly, T), [T] = C (not K)
 temps = np.array([0, 5, 10, 15, 18, 20, 25, 30, 35, 40, 45, 50, 55])
