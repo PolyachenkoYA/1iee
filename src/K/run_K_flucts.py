@@ -31,7 +31,7 @@ compr = 0.0003
 time = 1000
 omp_default = multiprocessing.cpu_count()
 equil_maxsol_poly = [-2.9516, 1117.2]   # maxsol = np.polyval(equil_maxsol_poly, T), [T] = C (not K)
-temps = np.array([0, 5, 10, 15, 18, 20, 25, 30, 35, 40, 45, 50, 55])
+temps = np.array([0, 5, 10, 15, 18, 20, 25, 30, 35, 40, 45, 50, 55, 2])
 P_taus = np.array([200, 400, 800, 1600, 3200, 6400, 12800, 25000, 50000, 100000, 200000, 400000, 800000, 1600000, 3200000, 6400000])
 P_taus = np.array([4, 8, 16, 32, 64, 128, 256, 512])
 comprs = np.array([2e-4, 3e-4, 4e-4])
@@ -71,7 +71,8 @@ for _ in range(1):
     maxsol = extra_water * 2 + 180
     nsteps = int(round(time / dt))
     
-    model_name = 'flucts_t4p2005_temp' + my.f2s(temp) + '_extW' + str(extra_water) + '_comprZ' + str(compressibility_Z)
+    #model_name = 'flucts_t4p2005_temp' + my.f2s(temp) + '_extW' + str(extra_water) + '_comprZ' + str(compressibility_Z)
+    model_name = 'flucts_t4p2005_temp' + my.f2s(temp) + '_extW' + str(extra_water)
     mdp_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.mdp')
     eql_filepath = os.path.join(run_path, model_name, eql_mdp_filename_base + '.mdp')
     checkpoint_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.cpt')
@@ -103,8 +104,8 @@ for _ in range(1):
                                                                                                   'gen-temp', str(temp + T_C2K), \
                                                                                                   'gen-seed', str(param_ids[0]),
                                                                                                   'compressibility', '3e-4 3e-4 ' + str(compressibility_Z) + ' 3e-4 0 0'])
-#                                                                                                  'compressibility', '3e-4 ' + str(compressibility_Z)])
-        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1', '1', '2', str(maxsol), init_pdb_filename]))
+        #my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1', '1', '2', str(maxsol), init_pdb_filename]))
+        my.run_it(' '.join(['./preproc_1phase.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1', '1', '2', str(maxsol), init_pdb_filename]))
         #sys.exit(1)
         my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1iee_wions', minimE_filename_base, mdrun_mode, '1', '0']))
         my.run_it(' '.join(['./save_initial_nojump.sh', model_name, minimE_filename_base]))

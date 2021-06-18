@@ -5,12 +5,11 @@
 
 set -e
 gmx_serial=gmx_mpi
-#gmx_serial=gmx_ser_gpu
-#gmx_serial=gmx_ser_newhead
+gmx_serial=$HOME/gromacs-2020/build_lin/bin/gmx
+gmx_serial=gmx_ser_20
 
 gmx_mdrun=gmx_mpi
-#gmx_mdrun=$HOME/.local/gromacs/bin/gmx_mpi
-#gmx_mdrun=gmx_angara
+gmx_mdrun=$HOME/gromacs-2020/build/bin/gmx_mpi
 #gmx_mdrun=$gmx_serial
 
 argc=$#
@@ -37,7 +36,8 @@ then
 else
         start_pdb_file=1iee_prot4gmx.pdb
 fi
-root_path=$(git rev-parse --show-toplevel)
+#root_path=$(git rev-parse --show-toplevel)
+root_path=`cat git_root_path`
 run_path=run/$job_id
 exe_path=src/K
 topol_filename=topol.top
@@ -56,7 +56,7 @@ cd $run_path
 ### Options-> Number of sells 3 3 3, offset -1 -1 -1
 ### there will be a number of lines in Reply Log. They have 'dist' field. Some of them have dist >~0.2. Some have <0.01. Use those with <0.01 in the next step.
 # python exe/get_chashes.py clashesALL.txt 8
-### get all water-residues (molecules) to delete duw to overlap
+### get all water-residues (molecules) deleted due to overlap
 
 ### these are residues numbers (HOH molecule's numbers in case of solvent) given by the findclash
 # delete #0-7:1092,1103,1139,1169
@@ -75,8 +75,8 @@ cd $run_path
 
 $gmx_serial pdb2gmx -f $start_pdb_file -o 1iee_init.gro -missing -p $topol_filename < protonation_gromacs.in
 $gmx_serial editconf -f 1iee_init.gro -o 1iee_newbox.gro -c -box $lx $ly $lz
-#$gmx_serial solvate -cp 1iee_newbox.gro -cs amber03w.ff/tip4p2005.gro -o 1iee_solv.gro -p $topol_filename -maxsol $maxsol
-$gmx_serial solvate -cp 1iee_newbox.gro -cs tip4p.gro                  -o 1iee_solv.gro -p $topol_filename -maxsol $maxsol
+$gmx_serial solvate -cp 1iee_newbox.gro -cs amber03w.ff/tip4p2005.gro -o 1iee_solv.gro -p $topol_filename -maxsol $maxsol
+#$gmx_serial solvate -cp 1iee_newbox.gro -cs tip4p.gro                  -o 1iee_solv.gro -p $topol_filename -maxsol $maxsol
 $gmx_serial grompp -f ions.mdp -c 1iee_solv.gro -p $topol_filename -o 1iee_wions.tpr -maxwarn 5
 $gmx_serial genion -s 1iee_wions.tpr -o 1iee_wions.gro -p $topol_filename -pname NA -nname CL -neutral -rmin 0.2  < genion_gromacs.in
 

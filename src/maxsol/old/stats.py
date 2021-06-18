@@ -10,14 +10,16 @@ import mylib as my
 import gromacs.formats as gmx
 
 # ========== paths ============
-root_path = my.git_root_path()
-run_path = os.path.join(root_path, 'run')
-exe_path = os.path.join(root_path, 'src', 'maxsol')
-res_path = os.path.join(root_path, 'res')
+#root_path = my.git_root_path()
+with open('git_root_path', 'r') as f:
+    root_path = f.readline()
+run_path = os.path.join(root_path, 'run', 'size_analysis')
+exe_path = os.path.join(root_path, 'src', 'maxsol', 'old')
+res_path = os.path.join(root_path, 'res', 'size_analysis')
 default_output_dir = 'xvg'
 gmx_exe = 'gmx_mpi'
 #gmx_exe = 'gmx_angara'
-gmx_exe = 'gmx_serial'
+gmx_exe = 'gmx_ser'
 save_mode = 'save'
 draw_mode = 'draw'
 process_mode = 'proc'
@@ -29,6 +31,7 @@ features_flag = '-feat'
 output_dir_flag = '-dir'
 stab_time_flag = '-stab_time'
 maxsol_prefix = 'maxsol'
+#maxsol_prefix = 'jobs_pressure_maxsol/job112/t15'
 all_modes = [process_mode, draw_mode, save_mode, short_mode]
 all_features = [temperature_feat_str, pressure_feat_str]
 energy_features_ids = {temperature_feat_str : '15',
@@ -86,15 +89,15 @@ def process_model(model_path, trajectory, cut_time, xvgres_path=default_output_d
     for i, field in enumerate(xvg_file.names):
         cut_data = data[i][stab_time_ind]
         mean_val = np.mean(cut_data)
-        val_std = np.std(cut_data)
+        val_std = np.std(cut_data) / np.sqrt(len(cut_data) - 1)
         mean_vals[i] = mean_val
         std_vals[i] = val_std
         if(((draw_mode in modes) or (save_mode in modes)) and not (short_mode in modes)):
-            plot_title = '$t_{cut} = ' + my.f2str(cut_time) + '$; ' + field + ' = $' +  my.f2str(mean_val) + '\pm' + my.f2str(val_std) + '$'
+            plot_title = '$t_{cut} = ' + my.f2s(cut_time) + '$; ' + field + ' = $' +  my.f2s(mean_val) + '\pm' + my.f2s(val_std) + '$'
             fig, ax = my.get_fig('time (ps)', field, title=plot_title)
             xvg_file.plot(maxpoints=None, columns=[0, i+1])
             ax.plot(np.array([1, 1]) * cut_time, [min(data[i]), max(data[i])], color='red')
-            
+
             if(save_mode in modes):
                 pic_path = os.path.join(xvgres_path, base_filename + '_' + field + '.jpg')
                 plt.savefig(pic_path)
@@ -114,15 +117,17 @@ if(argc < 6):
     my.parse_args(args, \
                   [output_dir_flag, modes_flag, features_flag, stab_time_flag], \
                   possible_values=[None, all_modes, all_features, None], \
-                  possible_arg_numbers=[[1], ['+'], [1, 2], [0, 1]])
+                  possible_arg_numbers=[[1], ['+'], [1, 2], [0, 1]], \
+                  default_values=[None, None, None, [str(stab_time_default)]])
 features.sort(key = lambda f: int(energy_features_ids[f]))
-stab_time = int(stab_time[0]) if len(stab_time) > 0 else stab_time_default
+#stab_time = int(stab_time[0]) if len(stab_time) > 0 else stab_time_default
+stab_time = int(stab_time[0])
 
 model_res_path = os.path.join(res_path, output_dir)
 model_path = os.path.join(run_path, output_dir)
 
 # ========== process ===========
-target_pressure = 1
+target_pressure = 0
 maxsol = [1024, 1088, 1152, 1216, 1274]
 #maxsol = [1024, 1274]
 maxsol = [1053, 1054, 1055, 1056]
@@ -133,11 +138,12 @@ maxsol = []
 
 if(len(maxsol) == 0):
     dir_for_list = os.path.join(res_path, output_dir)
+    print('init: ', dir_for_list)
     if(not os.path.isdir(dir_for_list)):
         dir_for_list = os.path.join(run_path, output_dir)
     #maxsol = [int(maxsol_dir[len(maxsol_prefix):]) for maxsol_dir in os.listdir(dir_for_list)]
     maxsol = [int(re.search(r'.*' + maxsol_prefix + r'(\d+).*', maxsol_dir).group(1)) for maxsol_dir in os.listdir(dir_for_list)]
-    
+
 model_names =  [(maxsol_prefix + str(n)) for n in maxsol]
 N_models = len(model_names)
 print('models:\n', model_names)
@@ -174,11 +180,18 @@ print('slope1 = ', slope1)
 print('target maxsol2 = ', target_maxsol2)
 print('slope2 = ', slope2)
 if((draw_mode in modes) or (save_mode in modes)):
-    fig, ax = my.get_fig('maxsol', 'Pressure (bar)', title='Pressure(maxsol)')
+    fig, ax = my.get_fig('maxsol ($H_2 O / cell$)', 'Pressure (bar)', title='P(maxsol)')
+
     ax.errorbar(maxsol, pressure, yerr=d_pressure,
                 marker='o', markerfacecolor='None', linestyle='', color='black')
-    ax.plot(x_fit, pressure_fit1, color='black', label='lin fit; ms = ' + my.f2str(target_maxsol1, 6))
-    ax.plot(x_fit, pressure_fit2, '--', color='black', label='q fit; ms = ' + my.f2str(target_maxsol2, 6))
+
+    #ax.plot(x_fit, pressure_fit1, '--', color='black', label='lin fit; ms = ' + my.f2s(target_maxsol1, 6))
+    ax.plot(x_fit, pressure_fit2, color='black', label='quad fit')
+
+    ax.plot([min(x_fit), target_maxsol2], [target_pressure] * 2, '--', color='red')
+    ax.plot([target_maxsol2] * 2, [target_pressure, min(pressure - d_pressure)], '--',
+             color='red', label= 'maxsol(P = ' + my.f2s(target_pressure) + ') = ' + str(int(round(target_maxsol2))))
+
     ax.set_ylim(y_range(pressure))
     ax.legend()
     if(save_mode in modes):

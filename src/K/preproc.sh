@@ -57,7 +57,7 @@ cd $run_path
 ### Options-> Number of sells 3 3 3, offset -1 -1 -1
 ### there will be a number of lines in Reply Log. They have 'dist' field. Some of them have dist >~0.2. Some have <0.01. Use those with <0.01 in the next step.
 # python exe/get_chashes.py clashesALL.txt 8
-### get all water-residues (molecules) to delete duw to overlap
+### get all water-residues (molecules) deleted due to overlap
 
 ### these are residues numbers (HOH molecule's numbers in case of solvent) given by the findclash
 # delete #0-7:1092,1103,1139,1169

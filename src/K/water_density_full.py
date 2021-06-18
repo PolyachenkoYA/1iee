@@ -220,7 +220,8 @@ for ti in range(N_av):
     #d_water_hist_average[ti, :] = np.std(water_hist[hist_av_inds[ti, 0] : hist_av_inds[ti, 1], :], axis=0) / np.sqrt(hist_av_inds[ti, 1] - hist_av_inds[ti, 0])
     d_water_hist_average[ti, :] = \
         np.sqrt(np.sum(d_water_hist[hist_av_inds[ti, 0] : hist_av_inds[ti, 1], :] ** 2, axis=0)) / (hist_av_inds[ti, 1] - hist_av_inds[ti, 0])
-    gas_rho_ind = water_hist_average[ti, :] < gas_max_rho
+    #gas_rho_ind = water_hist_average[ti, :] < gas_max_rho
+    gas_rho_ind = np.logical_or(Zcenters < z1_gas - Zstep, Zcenters > z2_gas + Zstep)
     gas_rho[ti] = np.mean(water_hist_average[ti, gas_rho_ind])
     d_gas_rho[ti] = np.sqrt(np.sum(d_water_hist_average[ti, gas_rho_ind] ** 2)) / np.sum(gas_rho_ind)
 
