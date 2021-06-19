@@ -195,7 +195,7 @@ for ti in range(N_frames):
     water_hist[ti, :] = np.histogram(w_z[ti, :], bins=Zbins)[0] * (m_H2O / dV)
     d_water_hist[ti, :] = np.sqrt(water_hist[ti, :] * (1 - water_hist[ti, :] / N_water)) * (m_H2O / dV)
     
-z1_gas = 9   # left side of the layer
+z1_gas = 8   # left side of the layer
 z2_gas = 25   # right side of the layer
 t_rho_stab = 30
 gas_z_ind = np.logical_or(Zcenters < z1_gas - Zstep, Zcenters > z2_gas + Zstep)
