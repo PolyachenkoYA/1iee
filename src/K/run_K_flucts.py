@@ -31,24 +31,29 @@ compr = 0.0003
 time = 1000
 omp_default = multiprocessing.cpu_count()
 equil_maxsol_poly = [-2.9516, 1117.2]   # maxsol = np.polyval(equil_maxsol_poly, T), [T] = C (not K)
-temps = np.array([0, 5, 10, 15, 18, 20, 25, 30, 35, 40, 45, 50, 55, 2])
+#temps = np.array([0, 5, 10, 15, 18, 20, 25, 30, 35, 40, 45, 50, 55, 2])
+temps = np.array([2, 4, 8, 18, 22, 25, 27, 30, 33, 37, 46, 53])
+temps = np.array([2, 4, 8, 18, 22, 27, 37, 46])
 P_taus = np.array([200, 400, 800, 1600, 3200, 6400, 12800, 25000, 50000, 100000, 200000, 400000, 800000, 1600000, 3200000, 6400000])
 P_taus = np.array([4, 8, 16, 32, 64, 128, 256, 512])
 comprs = np.array([2e-4, 3e-4, 4e-4])
 times = np.array([20.0, 40.0])
 #mdrun_mode = 'serial'
 mdrun_mode = 'slurm'
+yes_flags = ['y', 'yes', '1']
+no_flags = ['n', 'no', '0']
+yes_no_flags = yes_flags + no_flags
 
 # ============== arg parse ====================
 N_omp_max = multiprocessing.cpu_count()
 possible_gpu_ids = [str(i) for i in range(N_gpus)] + ['-1']
 possible_omps = [str(i) for i in range(1, N_omp_max + 1)]
 possible_preproc = [no_preproc, preproc_if_permitted, preproc_force, preproc_if_needed]
-[omp_cores, mpi_cores, gpu_id, do_mainrun, preproc_mode, param_ids, extra_water, compressibility_Z], _ = \
-    my.parse_args(sys.argv[1:], ['-omp', '-mpi', '-gpu_id', '-do_mainrun', '-preproc_mode', '-param_ids', '-extra_water', '-comprZ'], \
-                  possible_values=[possible_omps, None, possible_gpu_ids, ['no', 'yes'], possible_preproc, None, None, None], \
-                  possible_arg_numbers=[[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], None, [0, 1], [0, 1]], \
-                  default_values=[[str(omp_default)], ['0'], ['-1'], ['yes'], [preproc_if_needed], ['0'], ['0'], ['0']])
+[omp_cores, mpi_cores, gpu_id, do_mainrun, preproc_mode, param_ids, extra_water, compressibility_Z, temp, do_1phase], _ = \
+    my.parse_args(sys.argv[1:], ['-omp', '-mpi', '-gpu_id', '-do_mainrun', '-preproc_mode', '-param_ids', '-extra_water', '-comprZ', '-Tmp', '-do_1phase'], \
+                  possible_values=[possible_omps, None, possible_gpu_ids, yes_no_flags, possible_preproc, None, None, None, None, yes_no_flags], \
+                  possible_arg_numbers=[[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], None, [0, 1], [0, 1], [1], [1]], \
+                  default_values=[[str(omp_default)], ['0'], ['-1'], ['yes'], [preproc_if_needed], ['0'], ['0'], ['0'], None, None])
 param_ids = [int(i) for i in param_ids]
 omp_cores = int(omp_cores[0])
 mpi_cores = int(mpi_cores[0])
@@ -57,10 +62,13 @@ do_mainrun = (do_mainrun[0] == 'yes')
 preproc_mode = preproc_mode[0]
 extra_water = int(extra_water[0])
 compressibility_Z = float(compressibility_Z[0])
+temp = float(temp)
+do_1phase = (do_1phase in yes_flags)
+
 # ===================== cycle ===================
 # flucts K
 
-temp = temps[param_ids[0]]
+#temp = temps[param_ids[0]]
 #time = 40.0
 #gpu_id = param_ids[0] % N_gpus
 #compr = comprs[param_ids[1]]
@@ -71,8 +79,8 @@ for _ in range(1):
     maxsol = extra_water * 2 + 180
     nsteps = int(round(time / dt))
     
-    model_name = 'flucts_t4p2005_temp' + my.f2s(temp) + '_extW' + str(extra_water) + '_comprZ' + str(compressibility_Z)
-    #model_name = 'flucts_t4p2005_temp' + my.f2s(temp) + '_extW' + str(extra_water)
+    #model_name = 'flucts_t4p2005_temp' + my.f2s(temp) + '_extW' + str(extra_water) + '_comprZ' + str(compressibility_Z)
+    model_name = 'flucts_t4p2005' + ('_1phs' is do_1phase else '') + '_temp' + my.f2s(temp) + '_extW' + str(extra_water)
     mdp_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.mdp')
     eql_filepath = os.path.join(run_path, model_name, eql_mdp_filename_base + '.mdp')
     checkpoint_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.cpt')
@@ -99,14 +107,15 @@ for _ in range(1):
         print('Running the model from the initial "' + init_pdb_filename + '"')
         #sys.exit(1)
         my.run_it('./clear_restore.sh ' + model_name)
+        
+        compressibility_str = (('3e-4 3e-4 3e-4 0 0 0') if do_1phase else ('3e-4 3e-4 ' + str(compressibility_Z) + ' 3e-4 0 0'))
         my.run_it(['python', 'change_mdp.py', '-in', mdp_filepath, '-out', mdp_filepath, '-flds', 'ref-t', str(temp + T_C2K), \
                                                                                                   'nsteps', str(nsteps), \
                                                                                                   'gen-temp', str(temp + T_C2K), \
-                                                                                                  'gen-seed', str(param_ids[0]),
-                                                                                                  'compressibility', '3e-4 3e-4 ' + str(compressibility_Z) + ' 0 0 0'])
-#                                                                                                  'compressibility', '3e-4 3e-4 ' + str(compressibility_Z) + ' 3e-4 0 0'])
-        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1', '1', '2', str(maxsol), init_pdb_filename]))
-        #my.run_it(' '.join(['./preproc_1phase.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1', '1', '2', str(maxsol), init_pdb_filename]))
+                                                                                                  'gen-seed', str(0),
+                                                                                                  'compressibility', compressibility_str])
+                                                                                                  
+        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1', '1', '2', str(maxsol), init_pdb_filename, '1' if do_1phase else '0']))
         #sys.exit(1)
         my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1iee_wions', minimE_filename_base, mdrun_mode, '1', '0']))
         my.run_it(' '.join(['./save_initial_nojump.sh', model_name, minimE_filename_base]))

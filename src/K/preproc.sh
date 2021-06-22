@@ -13,10 +13,10 @@ gmx_mdrun=$HOME/gromacs-2020/build/bin/gmx_mpi
 #gmx_mdrun=$gmx_serial
 
 argc=$#
-if [ $argc -ne 8 ] && [ $argc -ne 9 ]
+if [ $argc -ne 8 ] && [ $argc -ne 9 ] && [ $argc -ne 10 ]
 then
-        printf "usage:\n$0   job_name   ompN   mpiN   gpu_id   [nx ny nz   [maxsol   [start_pdbf_file]]]\n"
-        exit 1
+	printf "usage:\n$0   job_name   ompN   mpiN   gpu_id   [nx ny nz   [maxsol   [start_pdbf_file   [1phase (1/0)]]]]\n"
+	exit 1
 fi
 
 job_id=$1
@@ -33,10 +33,17 @@ lz_big=$(echo $lz+25 | bc)
 maxsol=$8
 if [ $argc -gt 8 ]
 then
-        start_pdb_file=$9
+	start_pdb_file=$9
 else
-        start_pdb_file=1iee_prot4gmx.pdb
+	start_pdb_file=1iee_prot4gmx.pdb
 fi
+if [ $argc -gt 9 ]
+then
+	do_1phase=${10}
+else
+	do_1phase="0"
+fi
+
 #root_path=$(git rev-parse --show-toplevel)
 root_path=`cat git_root_path`
 run_path=run/$job_id
@@ -76,10 +83,15 @@ cd $run_path
 
 $gmx_serial pdb2gmx -f $start_pdb_file -o 1iee_init.gro -missing -p $topol_filename < protonation_gromacs.in
 $gmx_serial editconf -f 1iee_init.gro -o 1iee_smallbox.gro -c -box $lx $ly $lz
-$gmx_serial solvate -cp 1iee_smallbox.gro -cs amber03w.ff/tip4p2005.gro -o 1iee_solv.gro -p $topol_filename -maxsol $maxsol
-#$gmx_serial solvate -cp 1iee_smallbox.gro -cs tip4p.gro                  -o 1iee_solv.gro -p $topol_filename -maxsol $maxsol
-$gmx_serial editconf -f 1iee_solv.gro -o 1iee_bigbox.gro -c -box $lx $ly $lz_big
-$gmx_serial grompp -f ions.mdp -c 1iee_bigbox.gro -p $topol_filename -o 1iee_wions.tpr -maxwarn 5
+gro_to_ionize="1iee_solv.gro"
+$gmx_serial solvate -cp 1iee_smallbox.gro -cs amber03w.ff/tip4p2005.gro -o $gro_to_ionize -p $topol_filename -maxsol $maxsol
+#$gmx_serial solvate -cp 1iee_smallbox.gro -cs tip4p.gro                 -o $gro_to_ionize -p $topol_filename -maxsol $maxsol
+if [[ "$do_1phase" == "0" ]]
+then
+	gro_to_ionize="1iee_bigbox.gro"
+	$gmx_serial editconf -f 1iee_solv.gro -o $gro_to_ionize -c -box $lx $ly $lz_big
+fi
+$gmx_serial grompp -f ions.mdp -c $gro_to_ionize -p $topol_filename -o 1iee_wions.tpr -maxwarn 5
 $gmx_serial genion -s 1iee_wions.tpr -o 1iee_wions.gro -p $topol_filename -pname NA -nname CL -neutral -rmin 0.2  < genion_gromacs.in
 
 cd $root_path
