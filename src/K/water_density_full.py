@@ -70,7 +70,7 @@ res_path = os.path.join(root_path, 'res')
     my.parse_args(sys.argv[1:], ['-temp', '-recomp', '-Zstep', '-avg_time', '-extra_water', '-save_pics', '-draw_pics', '-comprZ', '-id', '-do_dist', '-do_P', '-do_L'], \
                   possible_values=[None, ['0', '1'], None, None, None, ['0', '1'], ['0', '1'], None, None, ['0', '1'], ['0', '1'], ['0', '1']], \
                   possible_arg_numbers=[[1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]], \
-                  default_values=[None, ['0'], ['0.5'], ['5'], ['0'], ['0'], ['1'], ['10'], ['0'], ['0'], ['1'], ['1']])
+                  default_values=[None, ['0'], ['0.5'], ['5'], ['0'], ['0'], ['1'], ['0'], ['0'], ['1'], ['1'], ['1']])
 Tmp = float(Tmp)
 recomp = (recomp[0] == '1')
 Zstep = float(Zstep[0])
@@ -105,7 +105,8 @@ supercell_str = ''.join([str(x) for x in supercell])
 
 # =================== per-model paths ======================
 #model_name = 'flucts_t4p2005_temp' + my.f2s(Tmp) + '_extW' + str(extra_water) + '_AnisoXYComprZ' + str(comprZ) + '_id' + str(model_id)
-model_name = 'flucts_t4p2005_temp' + my.f2s(Tmp) + '_extW' + str(extra_water) + '_comprZ' + str(comprZ)
+#model_name = 'flucts_t4p2005_temp' + my.f2s(Tmp) + '_extW' + str(extra_water) + '_comprZ' + str(comprZ)
+model_name = 'flucts_t4p2005_temp' + my.f2s(Tmp) + '_extW' + str(extra_water)
 model_path = os.path.join(run_path, model_name)
 traj_filepath = os.path.join(model_path, 'npt.xtc')
 xvg_filepath = os.path.join(model_path, 'npt.xvg')

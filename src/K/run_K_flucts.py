@@ -80,7 +80,7 @@ for _ in range(1):
     nsteps = int(round(time / dt))
     
     #model_name = 'flucts_t4p2005_temp' + my.f2s(temp) + '_extW' + str(extra_water) + '_comprZ' + str(compressibility_Z)
-    model_name = 'flucts_t4p2005' + ('_1phs' is do_1phase else '') + '_temp' + my.f2s(temp) + '_extW' + str(extra_water)
+    model_name = 'flucts_t4p2005' + ('_1phs' if do_1phase else '') + '_temp' + my.f2s(temp) + '_extW' + str(extra_water)
     mdp_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.mdp')
     eql_filepath = os.path.join(run_path, model_name, eql_mdp_filename_base + '.mdp')
     checkpoint_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.cpt')
