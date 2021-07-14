@@ -45,6 +45,7 @@ then
 	ny=$9
 	nz=${10}
 fi
+Nbox=$(echo $Nx*$Ny*$Nz | bc)
 lx=$(echo 7.7061*$nx*$Nx | bc)
 ly=$(echo 7.7061*$ny*$Ny | bc)
 lz=$(echo 3.7223*$nz*$Nz | bc)
@@ -106,10 +107,10 @@ gro_to_ionize=1iee_solv.gro
 winos_tpr=1iee_wions.tpr
 ready_gro=1iee_wions.gro
 
-#$gmx_serial pdb2gmx -f $start_pdb_file -o $init_gro -missing -p $topol_filename < protonation_gromacs.in
-#$gmx_serial editconf -f $init_gro -o $smallbox_gro -c -box $lx $ly $lz
-#$gmx_serial genconf -f $smallbox_gro -nbox $Nx $Ny $Nz -o $bigbox_gro
-#exit 1
+$gmx_serial pdb2gmx -f $start_pdb_file -o $init_gro -missing -p $topol_filename < protonation_gromacs.in
+$gmx_serial editconf -f $init_gro -o $smallbox_gro -c -box $lx $ly $lz
+$gmx_serial genconf -f $smallbox_gro -nbox $Nx $Ny $Nz -o $bigbox_gro
+python $root_path/$exe_path/multiply_topology.py -file $topol_filename -N $Nbox
 $gmx_serial solvate -cp $bigbox_gro -cs amber03w.ff/tip4p2005.gro -o $gro_to_ionize -p $topol_filename -maxsol $maxsol   # tip4p/2005
 #$gmx_serial solvate -cp $bigbox_gro -cs tip4p.gro                 -o $gro_to_ionize -p $topol_filename -maxsol $maxsol   # tip4p
 if [[ "$do_1phase" == "0" ]]

@@ -78,11 +78,14 @@ do_1phase = (do_1phase in yes_flags)
 #for Ptau_i, P_tau in enumerate(P_taus[param_ids[3:]]):
 for _ in range(1):
     #maxsol = int((round(np.polyval(equil_maxsol_poly, temp)) + extra_water) * 2)   # +180 to compensate for water that is reaplced with ions, but it's clreafy included in the polyval
-    maxsol = (extra_water * np.prod(small_cell_size) + 180) * np.prod(big_cell_size)
+    Nbox = np.prod(big_cell_size)
+    bigbox_str = ''.join([str(s) for s in small_cell_size])
+    maxsol = (extra_water * np.prod(small_cell_size) + 180) * Nbox
     nsteps = int(round(time / dt))
     
     #model_name = 'flucts_t4p2005_temp' + my.f2s(temp) + '_extW' + str(extra_water) + '_comprZ' + str(compressibility_Z)
-    model_name = 'flucts_t4p2005' + ('_1phs' if do_1phase else '') + '_temp' + my.f2s(temp) + '_extW' + str(extra_water)
+    #model_name = 'flucts_t4p2005' + ('_1phs' if do_1phase else '') + '_temp' + my.f2s(temp) + '_extW' + str(extra_water)
+    model_name =  + 'temp' + my.f2s(temp) + '_extW' + str(extra_water) + '_bigbox' + bigbox_str + ('_1phs' if do_1phase else '')
     mdp_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.mdp')
     eql_filepath = os.path.join(run_path, model_name, eql_mdp_filename_base + '.mdp')
     checkpoint_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.cpt')
