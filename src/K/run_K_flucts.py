@@ -13,6 +13,8 @@ with open('git_root_path', 'r') as f:
 run_path = os.path.join(root_path, 'run')
 exe_path = os.path.join(root_path, 'src', 'K')
 res_path = os.path.join(root_path, 'res')
+small_cell_size = np.array([1, 1, 2])
+big_cell_size = np.array([2, 2, 2])
 main_mdp_filename_base = 'npt'
 eql_mdp_filename_base = 'eql'
 no_preproc = 'no'
@@ -20,7 +22,7 @@ preproc_if_permitted = 'ask'
 preproc_if_needed = 'if_needed'
 preproc_force = 'force'
 minimE_filename_base = 'em'
-init_pdb_filename = '1iee112_prot4gmx.pdb'
+init_pdb_filename = '1iee' + ''.join([str(s) for s in small_cell_size]) + '_prot4gmx.pdb'
 
 # ================ params =================
 
@@ -76,7 +78,7 @@ do_1phase = (do_1phase in yes_flags)
 #for Ptau_i, P_tau in enumerate(P_taus[param_ids[3:]]):
 for _ in range(1):
     #maxsol = int((round(np.polyval(equil_maxsol_poly, temp)) + extra_water) * 2)   # +180 to compensate for water that is reaplced with ions, but it's clreafy included in the polyval
-    maxsol = extra_water * 2 + 180
+    maxsol = (extra_water * np.prod(small_cell_size) + 180) * np.prod(big_cell_size)
     nsteps = int(round(time / dt))
     
     #model_name = 'flucts_t4p2005_temp' + my.f2s(temp) + '_extW' + str(extra_water) + '_comprZ' + str(compressibility_Z)
@@ -115,7 +117,10 @@ for _ in range(1):
                                                                                                   'gen-seed', str(0),
                                                                                                   'compressibility', compressibility_str])
                                                                                                   
-        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1', '1', '2', str(maxsol), init_pdb_filename, '1' if do_1phase else '0']))
+        my.run_it(' '.join(['./preproc.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), \
+                            str(big_cell_size[0]), str(big_cell_size[1]), str(big_cell_size[2]), \
+                            str(small_cell_size[0]), str(small_cell_size[1]), str(small_cell_size[2]), \
+                            str(maxsol), init_pdb_filename, '1' if do_1phase else '0']))
         #sys.exit(1)
         my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1iee_wions', minimE_filename_base, mdrun_mode, '1', '0']))
         my.run_it(' '.join(['./save_initial_nojump.sh', model_name, minimE_filename_base]))

@@ -12,10 +12,20 @@ gmx_mdrun=gmx_mpi
 gmx_mdrun=$HOME/gromacs-2020/build/bin/gmx_mpi
 #gmx_mdrun=$gmx_serial
 
+nx="1"
+ny="1"
+nz="2"
+Nx="1"
+Ny="1"
+Nz="1"
+maxsol="0"
+start_pdb_file=1iee_prot4gmx.pdb
+do_1phase="0"
+
 argc=$#
-if [ $argc -ne 8 ] && [ $argc -ne 9 ] && [ $argc -ne 10 ]
+if [ $argc -ne 11 ] && [ $argc -ne 12 ] && [ $argc -ne 13 ] && [ $argc -ne 8 ] && [ $argc -ne 5 ]
 then
-	printf "usage:\n$0   job_name   ompN   mpiN   gpu_id   [nx ny nz   [maxsol   [start_pdbf_file   [1phase (1/0)]]]]\n"
+	printf "usage:\n$0   job_name   ompN   mpiN   gpu_id   [Nx Ny Nz($Nx,$Ny,$Nz)   [nx ny nz($nx,$ny,$nz)   [maxsol($maxsol)   [start_pdbf_file($start_pdb_file)   [1phase($do_1phase)]]]]]\n"
 	exit 1
 fi
 
@@ -23,25 +33,33 @@ job_id=$1
 omp=$2
 mpiN=$3
 gpu_id=$4
-nx=$5
-ny=$6
-nz=$7
-lx=$(echo 7.7061*$nx | bc)
-ly=$(echo 7.7061*$ny | bc)
-lz=$(echo 3.7223*$nz | bc)
-lz_big=$(echo $lz+25 | bc)
-maxsol=$8
-if [ $argc -gt 8 ]
+if [ $argc -gt 4 ]
 then
-	start_pdb_file=$9
-else
-	start_pdb_file=1iee_prot4gmx.pdb
+	Nx=$5
+	Ny=$6
+	Nz=$7
 fi
-if [ $argc -gt 9 ]
+if [ $argc -gt 7 ]
 then
-	do_1phase=${10}
-else
-	do_1phase="0"
+	nx=$8
+	ny=$9
+	nz=${10}
+fi
+lx=$(echo 7.7061*$nx*$Nx | bc)
+ly=$(echo 7.7061*$ny*$Ny | bc)
+lz=$(echo 3.7223*$nz*$Nz | bc)
+lz_big=$(echo $lz+25 | bc)
+if [ $argc -gt 10 ]
+then
+	maxsol=${11}
+fi
+if [ $argc -gt 11 ]
+then
+	start_pdb_file=${12}
+fi
+if [ $argc -gt 12 ]
+then
+	do_1phase=${13}
 fi
 
 #root_path=$(git rev-parse --show-toplevel)
@@ -81,18 +99,27 @@ cd $run_path
 
 # ../src/exe/playmol2gmx.sh 1iee_prot.pdb 1iee_prot4gmx.pdb
 
-$gmx_serial pdb2gmx -f $start_pdb_file -o 1iee_init.gro -missing -p $topol_filename < protonation_gromacs.in
-$gmx_serial editconf -f 1iee_init.gro -o 1iee_smallbox.gro -c -box $lx $ly $lz
-gro_to_ionize="1iee_solv.gro"
-$gmx_serial solvate -cp 1iee_smallbox.gro -cs amber03w.ff/tip4p2005.gro -o $gro_to_ionize -p $topol_filename -maxsol $maxsol
-#$gmx_serial solvate -cp 1iee_smallbox.gro -cs tip4p.gro                 -o $gro_to_ionize -p $topol_filename -maxsol $maxsol
+init_gro=1iee_init.gro
+smallbox_gro=1iee_smallbox.gro
+bigbox_gro=1iee_bigbox.gro
+gro_to_ionize=1iee_solv.gro
+winos_tpr=1iee_wions.tpr
+ready_gro=1iee_wions.gro
+
+#$gmx_serial pdb2gmx -f $start_pdb_file -o $init_gro -missing -p $topol_filename < protonation_gromacs.in
+#$gmx_serial editconf -f $init_gro -o $smallbox_gro -c -box $lx $ly $lz
+#$gmx_serial genconf -f $smallbox_gro -nbox $Nx $Ny $Nz -o $bigbox_gro
+#exit 1
+$gmx_serial solvate -cp $bigbox_gro -cs amber03w.ff/tip4p2005.gro -o $gro_to_ionize -p $topol_filename -maxsol $maxsol   # tip4p/2005
+#$gmx_serial solvate -cp $bigbox_gro -cs tip4p.gro                 -o $gro_to_ionize -p $topol_filename -maxsol $maxsol   # tip4p
 if [[ "$do_1phase" == "0" ]]
 then
-	gro_to_ionize="1iee_bigbox.gro"
-	$gmx_serial editconf -f 1iee_solv.gro -o $gro_to_ionize -c -box $lx $ly $lz_big
+	old_gro_to_ionize=$gro_to_ionize
+	gro_to_ionize=1iee_2phase.gro
+	$gmx_serial editconf -f $old_gro_to_ionize -o $gro_to_ionize -c -box $lx $ly $lz_big
 fi
-$gmx_serial grompp -f ions.mdp -c $gro_to_ionize -p $topol_filename -o 1iee_wions.tpr -maxwarn 5
-$gmx_serial genion -s 1iee_wions.tpr -o 1iee_wions.gro -p $topol_filename -pname NA -nname CL -neutral -rmin 0.2  < genion_gromacs.in
+$gmx_serial grompp -f ions.mdp -c $gro_to_ionize -p $topol_filename -o $winos_tpr -maxwarn 5
+$gmx_serial genion -s $winos_tpr -o $ready_gro -p $topol_filename -pname NA -nname CL -neutral -rmin 0.2  < genion_gromacs.in
 
 cd $root_path
 cd $exe_path
