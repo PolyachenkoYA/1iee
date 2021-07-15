@@ -1,2 +1,2 @@
-sleep 9000
+sleep 900
 python tst.py
