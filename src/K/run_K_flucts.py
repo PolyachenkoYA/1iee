@@ -54,8 +54,8 @@ possible_preproc = [no_preproc, preproc_if_permitted, preproc_force, preproc_if_
 [omp_cores, mpi_cores, gpu_id, do_mainrun, preproc_mode, param_ids, extra_water, compressibility_Z, temp, do_1phase], _ = \
     my.parse_args(sys.argv[1:], ['-omp', '-mpi', '-gpu_id', '-do_mainrun', '-preproc_mode', '-param_ids', '-extra_water', '-comprZ', '-Tmp', '-do_1phase'], \
                   possible_values=[possible_omps, None, possible_gpu_ids, yes_no_flags, possible_preproc, None, None, None, None, yes_no_flags], \
-                  possible_arg_numbers=[[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], None, [0, 1], [0, 1], [1], [1]], \
-                  default_values=[[str(omp_default)], ['0'], ['-1'], ['yes'], [preproc_if_needed], ['0'], ['0'], ['0'], None, None])
+                  possible_arg_numbers=[[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], None, [0, 1], [0, 1], [1], [0, 1]], \
+                  default_values=[[str(omp_default)], ['0'], ['-1'], ['yes'], [preproc_if_needed], ['0'], ['0'], ['0'], None, ['0']])
 param_ids = [int(i) for i in param_ids]
 omp_cores = int(omp_cores[0])
 mpi_cores = int(mpi_cores[0])
@@ -65,7 +65,7 @@ preproc_mode = preproc_mode[0]
 extra_water = int(extra_water[0])
 compressibility_Z = float(compressibility_Z[0])
 temp = float(temp)
-do_1phase = (do_1phase in yes_flags)
+do_1phase = (do_1phase[0] in yes_flags)
 
 # ===================== cycle ===================
 # flucts K
@@ -79,13 +79,14 @@ do_1phase = (do_1phase in yes_flags)
 for _ in range(1):
     #maxsol = int((round(np.polyval(equil_maxsol_poly, temp)) + extra_water) * 2)   # +180 to compensate for water that is reaplced with ions, but it's clreafy included in the polyval
     Nbox = np.prod(big_cell_size)
-    bigbox_str = ''.join([str(s) for s in small_cell_size])
-    maxsol = (extra_water * np.prod(small_cell_size) + 180) * Nbox
+    bigbox_str = ''.join([str(s) for s in big_cell_size])
+    #maxsol = (extra_water * np.prod(small_cell_size) + 180) * Nbox + 1
+    maxsol = extra_water * np.prod(small_cell_size) + 180
     nsteps = int(round(time / dt))
     
     #model_name = 'flucts_t4p2005_temp' + my.f2s(temp) + '_extW' + str(extra_water) + '_comprZ' + str(compressibility_Z)
     #model_name = 'flucts_t4p2005' + ('_1phs' if do_1phase else '') + '_temp' + my.f2s(temp) + '_extW' + str(extra_water)
-    model_name =  + 'temp' + my.f2s(temp) + '_extW' + str(extra_water) + '_bigbox' + bigbox_str + ('_1phs' if do_1phase else '')
+    model_name =  'temp' + my.f2s(temp) + '_extW' + str(extra_water) + '_bigbox' + bigbox_str + ('_1phs' if do_1phase else '')
     mdp_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.mdp')
     eql_filepath = os.path.join(run_path, model_name, eql_mdp_filename_base + '.mdp')
     checkpoint_filepath = os.path.join(run_path, model_name, main_mdp_filename_base + '.cpt')
@@ -125,7 +126,7 @@ for _ in range(1):
                             str(small_cell_size[0]), str(small_cell_size[1]), str(small_cell_size[2]), \
                             str(maxsol), init_pdb_filename, '1' if do_1phase else '0']))
         #sys.exit(1)
-        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1iee_wions', minimE_filename_base, mdrun_mode, '1', '0']))
+        my.run_it(' '.join(['./mainrun.sh', model_name, str(omp_cores), str(mpi_cores), str(gpu_id), '1iee_bigbox.gro', minimE_filename_base, mdrun_mode, '1', '0']))
         my.run_it(' '.join(['./save_initial_nojump.sh', model_name, minimE_filename_base]))
 
     if(do_mainrun):

@@ -17,7 +17,7 @@ extra_waters = [0, 150, 300, 450]
 extra_waters = [600, 750]
 extra_waters = [0, 150, 300, 450, 600, 750]
 #extra_waters = [0, 150, 300, 450]
-#extra_waters = [0]
+extra_waters = [0]
 
 Tmps = [8]  # 26,2
 #Tmps = [2, 4, 8, 12, 18, 22, 27]
@@ -32,7 +32,7 @@ for ti in range(len(Tmps)):
     for i in range(len(extra_waters)):
         #my.run_it('python water_density_full.py -temp ' + str(Tmps[ti]) + ' -extra_water ' + str(extra_waters[i]) + ' -do_dist 1 -save_pics 1 -avg_time 10 -Zstep 1 -recomp 1')
         
-        my.run_it('sbatch -J gmx' + str(Tmps[ti]) + '_' + str(extra_waters[i]) + ' -p ' + partition + ' -N ' + str(mpi) + ' --ntasks-per-node=' + str(omp) + ' --wrap="python run_K_flucts.py -Tmp ' + str(Tmps[ti]) + ' '  + ' -omp ' + str(omp) + ' -mpi ' + str(mpi) + ' -extra_water ' + str(extra_waters[i]) + ' -do_1phase 0"')
+        my.run_it('sbatch -J gmx' + str(Tmps[ti]) + '_' + str(extra_waters[i]) + ' -p ' + partition + ' -N ' + str(mpi) + ' --ntasks-per-node=' + str(omp) + ' --wrap="python run_K_flucts.py -Tmp ' + str(Tmps[ti])  + ' -omp ' + str(omp) + ' -mpi ' + str(mpi) + ' -extra_water ' + str(extra_waters[i]) + '"')
         
         #my.run_it('sbatch -J gmx'   + str(extra_waters[i]) + ' -p ' + partition + ' -N ' + str(mpi) + ' --ntasks-per-node=1                --wrap="python run_K_flucts.py -param_ids 8 -omp ' + str(omp) + ' -mpi ' + str(mpi) + ' -extra_water ' + str(extra_waters[i]) + '"')
         

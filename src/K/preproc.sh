@@ -46,10 +46,13 @@ then
 	nz=${10}
 fi
 Nbox=$(echo $Nx*$Ny*$Nz | bc)
-lx=$(echo 7.7061*$nx*$Nx | bc)
-ly=$(echo 7.7061*$ny*$Ny | bc)
-lz=$(echo 3.7223*$nz*$Nz | bc)
-lz_big=$(echo $lz+25 | bc)
+lx=$(echo 7.7061*$nx | bc)
+ly=$(echo 7.7061*$ny | bc)
+lz=$(echo 3.7223*$nz | bc)
+Lx=$(echo $lx*$Nx | bc)
+Ly=$(echo $ly*$Ny | bc)
+Lz=$(echo $lz*$Nz | bc)
+Lz_big=$(echo $Lz+25 | bc)
 if [ $argc -gt 10 ]
 then
 	maxsol=${11}
@@ -104,23 +107,23 @@ init_gro=1iee_init.gro
 smallbox_gro=1iee_smallbox.gro
 bigbox_gro=1iee_bigbox.gro
 gro_to_ionize=1iee_solv.gro
-winos_tpr=1iee_wions.tpr
-ready_gro=1iee_wions.gro
+wions_tpr=1iee_wions.tpr
+wions_gro=1iee_wions.gro
 
 $gmx_serial pdb2gmx -f $start_pdb_file -o $init_gro -missing -p $topol_filename < protonation_gromacs.in
 $gmx_serial editconf -f $init_gro -o $smallbox_gro -c -box $lx $ly $lz
-$gmx_serial genconf -f $smallbox_gro -nbox $Nx $Ny $Nz -o $bigbox_gro
+$gmx_serial solvate -cp $smallbox_gro -cs amber03w.ff/tip4p2005.gro -o $gro_to_ionize -p $topol_filename -maxsol $maxsol   # tip4p/2005
+#$gmx_serial solvate -cp $smallbox_gro -cs tip4p.gro                 -o $gro_to_ionize -p $topol_filename -maxsol $maxsol   # tip4p
+$gmx_serial grompp -f ions.mdp -c $gro_to_ionize -p $topol_filename -o $wions_tpr -maxwarn 5
+$gmx_serial genion -s $wions_tpr -o $wions_gro -p $topol_filename -pname NA -nname CL -neutral -rmin 0.2  < genion_gromacs.in
+$gmx_serial genconf -f $wions_gro -nbox $Nx $Ny $Nz -o $bigbox_gro
 python $root_path/$exe_path/multiply_topology.py -file $topol_filename -N $Nbox
-$gmx_serial solvate -cp $bigbox_gro -cs amber03w.ff/tip4p2005.gro -o $gro_to_ionize -p $topol_filename -maxsol $maxsol   # tip4p/2005
-#$gmx_serial solvate -cp $bigbox_gro -cs tip4p.gro                 -o $gro_to_ionize -p $topol_filename -maxsol $maxsol   # tip4p
 if [[ "$do_1phase" == "0" ]]
 then
-	old_gro_to_ionize=$gro_to_ionize
-	gro_to_ionize=1iee_2phase.gro
-	$gmx_serial editconf -f $old_gro_to_ionize -o $gro_to_ionize -c -box $lx $ly $lz_big
+	gro_2phase=1iee_2phase.gro
+	$gmx_serial editconf -f $bigbox_gro -o $gro_2phase -c -box $Lx $Ly $Lz_big
+	mv $gro_2phase $bigbox_gro
 fi
-$gmx_serial grompp -f ions.mdp -c $gro_to_ionize -p $topol_filename -o $winos_tpr -maxwarn 5
-$gmx_serial genion -s $winos_tpr -o $ready_gro -p $topol_filename -pname NA -nname CL -neutral -rmin 0.2  < genion_gromacs.in
 
 cd $root_path
 cd $exe_path

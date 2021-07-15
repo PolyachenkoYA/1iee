@@ -13,14 +13,14 @@ gmx_mdrun=gmx_mpi2
 argc=$#
 if [ $argc -ne 9 ]
 then
-        printf "usage:\n$0   job_name   ompN   mpiN   gpu_id   in_name   out_name   run_mode   do_grompp(1/0)   do_dlb(1/0)\n"
+        printf "usage:\n$0   job_name   ompN   mpiN   gpu_id   in_filename   out_name   run_mode   do_grompp(1/0)   do_dlb(1/0)\n"
         exit 1
 fi
 job_id=$1
 ompN=$2
 mpiN=$3
 gpu_id=$4
-in_name=$5
+in_filename=$5
 name=$6
 run_mode=$7
 do_grompp=$8
@@ -61,7 +61,7 @@ cd $run_path
 
 if [ $do_grompp -eq 1 ]
 then
-    $gmx_serial grompp -f $name.mdp -c $in_name.gro -p topol.top -o $name.tpr -maxwarn 2
+    $gmx_serial grompp -f $name.mdp -c $in_filename -p topol.top -o $name.tpr -maxwarn 2
 fi
 
 if [[ "$run_mode" == "serial" ]]
