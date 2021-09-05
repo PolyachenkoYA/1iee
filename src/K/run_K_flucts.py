@@ -114,7 +114,7 @@ for _ in range(1):
         #sys.exit(1)
         my.run_it('./clear_restore.sh ' + model_name)
         
-        compressibility_str = (('3e-4 3e-4 3e-4 0 0 0') if do_1phase else ('3e-4 3e-4 ' + str(compressibility_Z) + ' 3e-4 0 0'))
+        compressibility_str = (('3e-4 3e-4 3e-4 0 0 0') if do_1phase else ('3e-4 3e-4 ' + str(compressibility_Z) + ' 0 0 0'))
         my.run_it(['python', 'change_mdp.py', '-in', mdp_filepath, '-out', mdp_filepath, '-flds', 'ref-t', str(temp + T_C2K), \
                                                                                                   'nsteps', str(nsteps), \
                                                                                                   'gen-temp', str(temp + T_C2K), \

@@ -16,8 +16,8 @@ extra_waters = [0, 100, 200, 300, 400]
 extra_waters = [0, 150, 300, 450]
 extra_waters = [600, 750]
 extra_waters = [0, 150, 300, 450, 600, 750]
-#extra_waters = [0, 150, 300, 450]
-extra_waters = [0]
+extra_waters = [450, 600, 750]
+#extra_waters = [0]
 
 Tmps = [8]  # 26,2
 #Tmps = [2, 4, 8, 12, 18, 22, 27]
