@@ -1,2 +1,2 @@
 # 1iee
-construction of a pipeline for crystal pdb simulation
+code and results for AMBER03+tip4p verification for crystallized lysozyme
